@@ -1,0 +1,101 @@
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "8090:8000"
+    volumes:
+      - ./backend/app:/app/app
+    environment:
+      - DATABASE_URL=postgresql://user:password@db:5432/family_org
+      - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672/
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
+      - GOOGLE_REDIRECT_URI=https://family.brian-scanlon.uk/api/auth/callback
+      - FRONTEND_URL=https://family.brian-scanlon.uk
+      - OLLAMA_HOST=http://host.docker.internal:11434
+      - OLLAMA_MODEL=deepseek-r1:latest
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      - db
+      - rabbitmq
+    networks:
+      - family-net
+
+  worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    command: ["python", "-m", "app.worker"]
+    volumes:
+      - ./backend/app:/app/app
+    environment:
+      - DATABASE_URL=postgresql://user:password@db:5432/family_org
+      - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672/
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
+      - GOOGLE_REDIRECT_URI=https://family.brian-scanlon.uk/api/auth/callback
+      - OLLAMA_HOST=http://host.docker.internal:11434
+      - OLLAMA_MODEL=deepseek-r1:latest
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      - db
+      - rabbitmq
+    networks:
+      - family-net
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    ports:
+      - "5180:5173"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    environment:
+      - VITE_API_URL=https://family.brian-scanlon.uk/api
+    depends_on:
+      - backend
+    networks:
+      - family-net
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    ports:
+      - "5680:5672"
+      - "15680:15672"
+    networks:
+      - family-net
+
+  db:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: family_org
+    ports:
+      - "5440:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - family-net
+
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    command: tunnel --no-autoupdate run
+    environment:
+      - TUNNEL_TOKEN=eyJhIjoiZjAyNzAxY2VlMzhhNmVhZDFjYjA3NGEwNGJhMjUxMjAiLCJ0IjoiZWExMDYxYTgtZjk2NS00MjgzLTliNGUtY2QwODlhZDcxMmU1IiwicyI6IllUUXpaalE0WVdFdE5tVTVOeTAwTTJSbExXRTFNR1l0WkRRME56a3daakUyTmpVMiJ9
+    restart: always
+    networks:
+      - family-net
+
+volumes:
+  postgres_data:
+
+networks:
+  family-net:
+    driver: bridge
