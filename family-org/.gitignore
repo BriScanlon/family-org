@@ -1,10 +1,32 @@
-node_modules
-dist
+# Environments and Secrets
 .env
+.venv/
+venv/
+env/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Node / Frontend
+node_modules/
+dist/
+build/
+.eslintcache
+
+# Docker & Database
+postgres_data/
+
+# OS and System
 .DS_Store
-__pycache__
-*.pyc
-.pytest_cache
-venv
-.venv
-postgres_data
+Thumbs.db
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
