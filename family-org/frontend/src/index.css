@@ -43,3 +43,20 @@
 @utility neu-flat {
   box-shadow: none;
 }
+
+.light {
+  --color-neu-base: #dcdce0;
+  --color-neu-dark: #b8b8bc;
+  --color-neu-light: #ffffff;
+
+  --color-text-primary: #1e1e22;
+  --color-text-secondary: #52525b;
+  --color-text-muted: #71717a;
+
+  --color-accent-teal: #0d9488;
+  --color-accent-teal-dim: #0f766e;
+  --color-accent-amber: #d97706;
+  --color-accent-amber-dim: #b45309;
+  --color-accent-red: #dc2626;
+  --color-accent-blue: #2563eb;
+}
