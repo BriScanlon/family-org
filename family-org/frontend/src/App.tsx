@@ -13,7 +13,12 @@ import { CalendarView } from './components/calendar/CalendarView'
 import { SettingsView } from './components/settings/SettingsView'
 import { NeuCard } from './components/ui/NeuCard'
 import { NeuButton } from './components/ui/NeuButton'
-import { ThemeProvider } from './contexts/ThemeContext'
+import { ThemeProvider, useTheme } from './contexts/ThemeContext'
+
+function ThemedToast() {
+  const { theme } = useTheme()
+  return <ToastContainer position="bottom-right" theme={theme} />
+}
 
 function App() {
   const [user, setUser] = useState<User | null>(null)
@@ -149,7 +154,7 @@ function App() {
   return (
     <ThemeProvider initialTheme={userTheme}>
       <div className="min-h-screen bg-neu-base font-sans text-text-primary flex flex-col">
-        <ToastContainer position="bottom-right" theme={userTheme} />
+        <ThemedToast />
         <Navbar user={user} activeTab={activeTab} onTabChange={setActiveTab} />
 
         <main className="flex-1 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6 w-full pb-20 md:pb-6">

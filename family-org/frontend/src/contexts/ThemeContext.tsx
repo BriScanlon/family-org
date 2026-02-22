@@ -40,6 +40,8 @@ export function ThemeProvider({ initialTheme = 'dark', children }: ThemeProvider
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ theme: next }),
+    }).catch(() => {
+      setTheme(theme)
     })
   }
 

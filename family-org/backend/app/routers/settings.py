@@ -4,6 +4,7 @@ from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
 from ..database import get_db
 from ..models import User
+from ..schemas import PreferencesUpdate
 from ..config import settings
 from .auth import get_me
 
@@ -14,9 +15,9 @@ def get_preferences(current_user: User = Depends(get_me)):
     return current_user.preferences or {}
 
 @router.patch("/preferences")
-def update_preferences(prefs: dict, db: Session = Depends(get_db), current_user: User = Depends(get_me)):
-    current = current_user.preferences or {}
-    current.update(prefs)
+def update_preferences(prefs: PreferencesUpdate, db: Session = Depends(get_db), current_user: User = Depends(get_me)):
+    current = dict(current_user.preferences or {})
+    current.update(prefs.model_dump(exclude_none=True))
     current_user.preferences = current
     db.add(current_user)
     db.commit()

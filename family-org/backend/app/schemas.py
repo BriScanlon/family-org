@@ -13,9 +13,18 @@ class User(UserBase):
     role: str
     points: int
     balance: float
-    
+    synced_calendars: list[str] = []
+    preferences: dict = {}
+
     model_config = {
         "from_attributes": True
+    }
+
+class PreferencesUpdate(BaseModel):
+    theme: Optional[str] = None
+
+    model_config = {
+        "extra": "forbid"
     }
 
 class ChoreBase(BaseModel):
