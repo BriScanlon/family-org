@@ -9,6 +9,20 @@ from .auth import get_me
 
 router = APIRouter(prefix="/settings", tags=["settings"])
 
+@router.get("/preferences")
+def get_preferences(current_user: User = Depends(get_me)):
+    return current_user.preferences or {}
+
+@router.patch("/preferences")
+def update_preferences(prefs: dict, db: Session = Depends(get_db), current_user: User = Depends(get_me)):
+    current = current_user.preferences or {}
+    current.update(prefs)
+    current_user.preferences = current
+    db.add(current_user)
+    db.commit()
+    db.refresh(current_user)
+    return current_user.preferences
+
 @router.get("/calendars")
 async def list_google_calendars(current_user: User = Depends(get_me)):
     if not current_user.google_access_token:
