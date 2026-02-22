@@ -19,6 +19,7 @@ class User(Base):
     threshold_preference = Column(Float, default=5.0) # Number of tasks/events before warning
     google_access_token = Column(String, nullable=True)
     google_refresh_token = Column(String, nullable=True)
+    preferences = Column(JSON, default=dict, nullable=False, server_default="{}")
 
     chores = relationship("Chore", back_populates="assignee")
     rewards = relationship("Reward", back_populates="redeemer")
