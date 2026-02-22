@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react'
-import { Check, ShieldCheck, Calendar as CalendarIcon, Save } from 'lucide-react'
+import { Check, ShieldCheck, Calendar as CalendarIcon, Save, Sun, Moon } from 'lucide-react'
 import { toast } from 'react-toastify'
 import clsx from 'clsx'
 import { NeuCard } from '../ui/NeuCard'
 import { NeuButton } from '../ui/NeuButton'
+import { useTheme } from '../../contexts/ThemeContext'
 import type { User, GoogleCalendar } from '../../types'
 
 interface SettingsViewProps {
@@ -16,6 +17,7 @@ export function SettingsView({ user, onUpdate }: SettingsViewProps) {
   const [selectedIds, setSelectedIds] = useState<string[]>(user.synced_calendars || [])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const { theme, toggleTheme } = useTheme()
 
   useEffect(() => {
     fetch('/api/settings/calendars')
@@ -89,6 +91,28 @@ export function SettingsView({ user, onUpdate }: SettingsViewProps) {
               Set as Parent
             </NeuButton>
           )}
+        </div>
+      </NeuCard>
+
+      <NeuCard>
+        <div className="flex items-center gap-3 mb-6">
+          {theme === 'dark' ? <Moon className="h-6 w-6 text-accent-teal" /> : <Sun className="h-6 w-6 text-accent-teal" />}
+          <h2 className="text-2xl font-bold text-text-primary">Appearance</h2>
+        </div>
+
+        <div className="flex items-center justify-between p-4 rounded-xl neu-inset-sm">
+          <div>
+            <p className="font-semibold text-text-primary">Theme</p>
+            <p className="text-sm text-text-muted mt-1">
+              {theme === 'dark' ? 'Dark mode is active' : 'Light mode is active'}
+            </p>
+          </div>
+          <NeuButton variant="ghost" size="sm" onClick={toggleTheme}>
+            <span className="flex items-center gap-2">
+              {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+              {theme === 'dark' ? 'Light Mode' : 'Dark Mode'}
+            </span>
+          </NeuButton>
         </div>
       </NeuCard>
 
