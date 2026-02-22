@@ -1,5 +1,6 @@
 import requests
 import time
+import uuid
 import unittest
 
 class TestFamilyOrgEndToEnd(unittest.TestCase):
@@ -11,9 +12,10 @@ class TestFamilyOrgEndToEnd(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
 
     def test_02_full_flow(self):
-        # 1. Create a test user
+        # 1. Create a fresh test user so no stale chores are assigned
+        unique = uuid.uuid4().hex[:8]
         user = requests.post(f"{self.BACKEND_URL}/auth/test-user", json={
-            "email": "test@example.com", "name": "Test User"
+            "email": f"test_{unique}@example.com", "name": "Test User"
         }).json()
         user_id = user["id"]
 
