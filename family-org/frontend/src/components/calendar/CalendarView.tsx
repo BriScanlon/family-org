@@ -53,7 +53,7 @@ export function CalendarView({ events }: CalendarViewProps) {
 
   return (
     <div className="bg-neu-base neu-raised rounded-2xl overflow-hidden flex flex-col min-h-[800px]">
-      <div className="p-6 border-b border-neu-light/30 flex items-center justify-between">
+      <div className="p-4 sm:p-6 border-b border-neu-light/30 flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-4">
           <h2 className="text-xl font-bold text-text-primary">
             {format(currentDate, 'MMMM yyyy')}
@@ -101,9 +101,9 @@ export function CalendarView({ events }: CalendarViewProps) {
         </div>
       </div>
 
-      <div className="flex-1 overflow-auto p-6">
+      <div className="flex-1 overflow-auto p-4 sm:p-6">
         {view === 'week' ? (
-          <div className="grid grid-cols-7 gap-4 h-full">
+          <div className="grid grid-cols-7 gap-4 h-full min-w-[840px]">
             {weekDays.map((day) => {
               const dayEvents = getEventsForDay(day)
               return (
@@ -131,7 +131,7 @@ export function CalendarView({ events }: CalendarViewProps) {
             })}
           </div>
         ) : (
-          <div className="flex flex-col h-full">
+          <div className="flex flex-col h-full min-w-[700px]">
             <div className="grid grid-cols-7 border-b border-neu-light/30 mb-2">
               {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(day => (
                 <div key={day} className="py-2 text-center text-xs font-bold text-text-muted uppercase tracking-widest">
@@ -139,7 +139,7 @@ export function CalendarView({ events }: CalendarViewProps) {
                 </div>
               ))}
             </div>
-            <div className="grid grid-cols-7 grid-rows-5 gap-px bg-neu-light/20 flex-1 border border-neu-light/30 rounded-xl overflow-hidden">
+            <div className="grid grid-cols-7 gap-px bg-neu-light/20 flex-1 border border-neu-light/30 rounded-xl overflow-hidden" style={{ gridAutoRows: '1fr' }}>
               {monthDays.map((day) => {
                 const dayEvents = getEventsForDay(day)
                 const isCurrentMonth = isSameMonth(day, currentDate)

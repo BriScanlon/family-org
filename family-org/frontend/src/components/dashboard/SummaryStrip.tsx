@@ -19,7 +19,7 @@ export function SummaryStrip({ chores, events, user }: SummaryStripProps) {
   })
 
   return (
-    <div className="grid grid-cols-3 gap-4">
+    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
       <NeuCard className="p-4 flex items-center gap-3">
         <div className="p-2 rounded-lg bg-accent-teal/10">
           <CheckSquare className="h-5 w-5 text-accent-teal" />

@@ -25,23 +25,21 @@
   }
 }
 
-@layer components {
-  .neu-raised {
-    box-shadow: 6px 6px 12px var(--color-neu-dark), -6px -6px 12px var(--color-neu-light);
-  }
-  .neu-raised-sm {
-    box-shadow: 3px 3px 6px var(--color-neu-dark), -3px -3px 6px var(--color-neu-light);
-  }
-  .neu-raised-lg {
-    box-shadow: 10px 10px 20px var(--color-neu-dark), -10px -10px 20px var(--color-neu-light);
-  }
-  .neu-inset {
-    box-shadow: inset 4px 4px 8px var(--color-neu-dark), inset -4px -4px 8px var(--color-neu-light);
-  }
-  .neu-inset-sm {
-    box-shadow: inset 2px 2px 4px var(--color-neu-dark), inset -2px -2px 4px var(--color-neu-light);
-  }
-  .neu-flat {
-    box-shadow: none;
-  }
+@utility neu-raised {
+  box-shadow: 6px 6px 12px var(--color-neu-dark), -6px -6px 12px var(--color-neu-light);
+}
+@utility neu-raised-sm {
+  box-shadow: 3px 3px 6px var(--color-neu-dark), -3px -3px 6px var(--color-neu-light);
+}
+@utility neu-raised-lg {
+  box-shadow: 10px 10px 20px var(--color-neu-dark), -10px -10px 20px var(--color-neu-light);
+}
+@utility neu-inset {
+  box-shadow: inset 4px 4px 8px var(--color-neu-dark), inset -4px -4px 8px var(--color-neu-light);
+}
+@utility neu-inset-sm {
+  box-shadow: inset 2px 2px 4px var(--color-neu-dark), inset -2px -2px 4px var(--color-neu-light);
+}
+@utility neu-flat {
+  box-shadow: none;
 }
