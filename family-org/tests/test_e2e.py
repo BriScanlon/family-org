@@ -42,5 +42,15 @@ class TestFamilyOrgEndToEnd(unittest.TestCase):
         self.assertEqual(res.status_code, 200)
         self.assertEqual(res.json()["money_added"], 5.00)
 
+    def test_03_league_table(self):
+        """Test that the league table can be fetched."""
+        response = requests.get(f"{self.BACKEND_URL}/dashboard/league-table")
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertIsInstance(data, list)
+        if len(data) > 0:
+            self.assertIn("standard_completed", data[0])
+            self.assertIn("bonus_completed", data[0])
+
 if __name__ == "__main__":
     unittest.main()

@@ -4,10 +4,40 @@ from typing import List
 import json
 from ..database import get_db
 from ..services.ai_agent import FamilyAIAgent
-from ..models import User, Event, Alert
+from ..models import User, Event, Alert, Chore
 from .auth import get_me
 
 router = APIRouter(prefix="/dashboard", tags=["dashboard"])
+
+@router.get("/league-table")
+def get_league_table(db: Session = Depends(get_db)):
+    users = db.query(User).all()
+    league = []
+    for user in users:
+        standard_completed = db.query(Chore).filter(
+            Chore.assignee_id == user.id,
+            Chore.is_bonus == False,
+            Chore.is_completed == True
+        ).count()
+        
+        bonus_completed = db.query(Chore).filter(
+            Chore.assignee_id == user.id,
+            Chore.is_bonus == True,
+            Chore.is_completed == True
+        ).count()
+        
+        league.append({
+            "user_id": user.id,
+            "name": user.name,
+            "standard_completed": standard_completed,
+            "bonus_completed": bonus_completed,
+            "total_points": user.points,
+            "total_balance": user.balance
+        })
+    
+    # Sort by standard_completed then bonus_completed
+    league.sort(key=lambda x: (x["standard_completed"], x["bonus_completed"]), reverse=True)
+    return league
 
 @router.get("/events")
 def get_family_events(db: Session = Depends(get_db)):
