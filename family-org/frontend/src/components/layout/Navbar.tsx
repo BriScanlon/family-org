@@ -1,7 +1,8 @@
-import { Zap, Wallet, Settings, LogOut } from 'lucide-react'
+import { Zap, Wallet, Settings, LogOut, Sun, Moon } from 'lucide-react'
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import clsx from 'clsx'
+import { useTheme } from '../../contexts/ThemeContext'
 import type { User } from '../../types'
 
 type Tab = 'dashboard' | 'calendar' | 'chores' | 'rewards' | 'settings'
@@ -14,6 +15,7 @@ interface NavbarProps {
 
 export function Navbar({ user, activeTab, onTabChange }: NavbarProps) {
   const [showUserMenu, setShowUserMenu] = useState(false)
+  const { theme, toggleTheme } = useTheme()
 
   return (
     <nav className="sticky top-0 z-50 bg-neu-base neu-raised-sm border-b border-neu-dark/50">
@@ -60,6 +62,14 @@ export function Navbar({ user, activeTab, onTabChange }: NavbarProps) {
                 £{user.balance.toFixed(2)}
               </span>
             </div>
+
+            <button
+              onClick={toggleTheme}
+              className="p-2 rounded-xl text-text-secondary hover:text-text-primary transition-all hover:neu-raised-sm"
+              title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+            >
+              {theme === 'dark' ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+            </button>
 
             <div className="relative">
               <button
