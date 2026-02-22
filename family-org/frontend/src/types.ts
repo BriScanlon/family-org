@@ -6,6 +6,7 @@ export interface User {
   balance: number
   role: string
   synced_calendars: string[]
+  preferences: Record<string, unknown>
 }
 
 export interface Chore {

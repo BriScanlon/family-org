@@ -13,6 +13,7 @@ import { CalendarView } from './components/calendar/CalendarView'
 import { SettingsView } from './components/settings/SettingsView'
 import { NeuCard } from './components/ui/NeuCard'
 import { NeuButton } from './components/ui/NeuButton'
+import { ThemeProvider } from './contexts/ThemeContext'
 
 function App() {
   const [user, setUser] = useState<User | null>(null)
@@ -143,52 +144,56 @@ function App() {
     )
   }
 
+  const userTheme = (user.preferences?.theme as 'dark' | 'light') || 'dark'
+
   return (
-    <div className="min-h-screen bg-neu-base font-sans text-text-primary flex flex-col">
-      <ToastContainer position="bottom-right" theme="dark" />
-      <Navbar user={user} activeTab={activeTab} onTabChange={setActiveTab} />
+    <ThemeProvider initialTheme={userTheme}>
+      <div className="min-h-screen bg-neu-base font-sans text-text-primary flex flex-col">
+        <ToastContainer position="bottom-right" theme={userTheme} />
+        <Navbar user={user} activeTab={activeTab} onTabChange={setActiveTab} />
 
-      <main className="flex-1 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6 w-full pb-20 md:pb-6">
-        <motion.div
-          key={activeTab}
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.2 }}
-        >
-          {activeTab === 'dashboard' && (
-            <Dashboard
-              user={user}
-              chores={chores}
-              events={events}
-              leagueTable={leagueTable}
-              alerts={alerts}
-              onCompleteChore={handleCompleteChore}
-              onAlertFeedback={handleAlertFeedback}
-              onViewCalendar={() => setActiveTab('calendar')}
-            />
-          )}
-          {activeTab === 'calendar' && <CalendarView events={events} />}
-          {activeTab === 'chores' && (
-            <ChoresView
-              chores={chores}
-              onComplete={handleCompleteChore}
-              onCreate={handleCreateChore}
-            />
-          )}
-          {activeTab === 'rewards' && (
-            <RewardsView
-              rewards={rewards}
-              userBalance={user.balance}
-              onRedeem={handleRedeemReward}
-              onCreate={handleCreateReward}
-            />
-          )}
-          {activeTab === 'settings' && <SettingsView user={user} onUpdate={fetchData} />}
-        </motion.div>
-      </main>
+        <main className="flex-1 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6 w-full pb-20 md:pb-6">
+          <motion.div
+            key={activeTab}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.2 }}
+          >
+            {activeTab === 'dashboard' && (
+              <Dashboard
+                user={user}
+                chores={chores}
+                events={events}
+                leagueTable={leagueTable}
+                alerts={alerts}
+                onCompleteChore={handleCompleteChore}
+                onAlertFeedback={handleAlertFeedback}
+                onViewCalendar={() => setActiveTab('calendar')}
+              />
+            )}
+            {activeTab === 'calendar' && <CalendarView events={events} />}
+            {activeTab === 'chores' && (
+              <ChoresView
+                chores={chores}
+                onComplete={handleCompleteChore}
+                onCreate={handleCreateChore}
+              />
+            )}
+            {activeTab === 'rewards' && (
+              <RewardsView
+                rewards={rewards}
+                userBalance={user.balance}
+                onRedeem={handleRedeemReward}
+                onCreate={handleCreateReward}
+              />
+            )}
+            {activeTab === 'settings' && <SettingsView user={user} onUpdate={fetchData} />}
+          </motion.div>
+        </main>
 
-      <BottomNav activeTab={activeTab} onTabChange={setActiveTab} />
-    </div>
+        <BottomNav activeTab={activeTab} onTabChange={setActiveTab} />
+      </div>
+    </ThemeProvider>
   )
 }
 
