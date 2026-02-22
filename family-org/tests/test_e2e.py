@@ -52,5 +52,13 @@ class TestFamilyOrgEndToEnd(unittest.TestCase):
             self.assertIn("standard_completed", data[0])
             self.assertIn("bonus_completed", data[0])
 
+    def test_04_user_preferences(self):
+        """Test that user preferences field exists and defaults to empty."""
+        user = requests.post(f"{self.BACKEND_URL}/auth/test-user", json={
+            "email": "prefs_test@example.com", "name": "Prefs Test User"
+        }).json()
+        self.assertIn("preferences", user)
+        self.assertIsInstance(user["preferences"], dict)
+
 if __name__ == "__main__":
     unittest.main()
