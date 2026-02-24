@@ -15,3 +15,4 @@ websockets
 aio-pika
 requests
 cryptography
+playwright
