@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { motion } from 'framer-motion'
-import { ChevronRight } from 'lucide-react'
+import { ChevronRight, Zap } from 'lucide-react'
 import { ToastContainer, toast } from 'react-toastify'
 import 'react-toastify/dist/ReactToastify.css'
 import type { User, Chore, Reward, Event, Alert, LeagueEntry } from './types'
@@ -161,21 +161,27 @@ function App() {
 
   if (loading) {
     return (
-      <div className="flex h-screen items-center justify-center bg-neu-base">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-accent-teal"></div>
+      <div className="flex h-screen items-center justify-center bg-surface-base">
+        <div className="flex flex-col items-center gap-4">
+          <div className="h-10 w-10 rounded-full border-2 border-accent-primary border-t-transparent animate-spin" />
+          <span className="text-sm text-text-muted font-medium">Loading...</span>
+        </div>
       </div>
     )
   }
 
   if (!user) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-neu-base p-4">
+      <div className="flex min-h-screen items-center justify-center bg-surface-base p-4">
         <ToastContainer position="bottom-right" theme="dark" />
-        <NeuCard className="w-full max-w-md p-10 text-center">
-          <h1 className="text-4xl font-extrabold text-text-primary tracking-tight mb-2">
+        <NeuCard className="w-full max-w-sm p-10 text-center">
+          <div className="bg-accent-primary text-text-inverse p-2 rounded-xl w-fit mx-auto mb-6">
+            <Zap className="h-8 w-8" />
+          </div>
+          <h1 className="text-3xl font-extrabold text-text-primary tracking-tight mb-1">
             FamilyOrg
           </h1>
-          <p className="text-text-muted mb-8">Organize your family life.</p>
+          <p className="text-text-muted mb-8 text-sm">Organize your family life</p>
           <NeuButton variant="teal" size="lg" className="w-full" onClick={handleLogin}>
             <span className="flex items-center justify-center gap-2">
               Sign in with Google <ChevronRight className="h-4 w-4" />
@@ -190,7 +196,7 @@ function App() {
 
   return (
     <ThemeProvider initialTheme={userTheme}>
-      <div className="min-h-screen bg-neu-base font-sans text-text-primary flex flex-col">
+      <div className="min-h-screen bg-surface-base font-sans text-text-primary flex flex-col">
         <ThemedToast />
         <Navbar user={user} activeTab={activeTab} onTabChange={setActiveTab} />
 
