@@ -1,62 +1,103 @@
 @import "tailwindcss";
 
 @theme {
-  --color-neu-base: #1e1e22;
-  --color-neu-dark: #151518;
-  --color-neu-light: #27272c;
+  /* ── Surfaces ── */
+  --color-surface-base: #09090b;
+  --color-surface-card: #18181b;
+  --color-surface-raised: #1f1f23;
+  --color-surface-overlay: #27272a;
 
-  --color-text-primary: #e4e4e7;
+  /* ── Borders ── */
+  --color-border-default: #27272a;
+  --color-border-muted: #1f1f23;
+  --color-border-accent: #2dd4bf;
+
+  /* ── Text ── */
+  --color-text-primary: #fafafa;
   --color-text-secondary: #a1a1aa;
-  --color-text-muted: #71717a;
+  --color-text-muted: #52525b;
+  --color-text-inverse: #09090b;
 
-  --color-accent-teal: #2dd4bf;
-  --color-accent-teal-dim: #0d9488;
+  /* ── Accent ── */
+  --color-accent-primary: #2dd4bf;
+  --color-accent-primary-hover: #5eead4;
+  --color-accent-primary-dim: #0d9488;
   --color-accent-amber: #fbbf24;
-  --color-accent-amber-dim: #d97706;
+  --color-accent-amber-hover: #fcd34d;
   --color-accent-red: #f87171;
   --color-accent-blue: #60a5fa;
 
-  --font-sans: "Inter", "sans-serif";
+  /* ── Legacy aliases (keeps existing component refs working during migration) ── */
+  --color-neu-base: var(--color-surface-base);
+  --color-neu-dark: #151518;
+  --color-neu-light: #27272c;
+  --color-accent-teal: var(--color-accent-primary);
+  --color-accent-teal-dim: var(--color-accent-primary-dim);
+
+  /* ── Font ── */
+  --font-sans: "Inter", "system-ui", "sans-serif";
 }
 
 @layer base {
   body {
-    @apply bg-neu-base text-text-primary font-sans antialiased;
+    @apply bg-surface-base text-text-primary font-sans antialiased;
+  }
+
+  ::selection {
+    background-color: color-mix(in srgb, var(--color-accent-primary) 30%, transparent);
   }
 }
 
-@utility neu-raised {
-  box-shadow: 6px 6px 12px var(--color-neu-dark), -6px -6px 12px var(--color-neu-light);
+/* ── Legacy neumorphic utilities (no-ops during migration, remove after) ── */
+@utility neu-raised { box-shadow: none; }
+@utility neu-raised-sm { box-shadow: none; }
+@utility neu-raised-lg { box-shadow: none; }
+@utility neu-inset { box-shadow: none; }
+@utility neu-inset-sm { box-shadow: none; }
+@utility neu-flat { box-shadow: none; }
+
+/* ── Editorial utilities ── */
+@utility card-shadow {
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4), 0 1px 2px rgba(0, 0, 0, 0.3);
 }
-@utility neu-raised-sm {
-  box-shadow: 3px 3px 6px var(--color-neu-dark), -3px -3px 6px var(--color-neu-light);
+@utility card-shadow-hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5), 0 2px 4px rgba(0, 0, 0, 0.3);
 }
-@utility neu-raised-lg {
-  box-shadow: 10px 10px 20px var(--color-neu-dark), -10px -10px 20px var(--color-neu-light);
-}
-@utility neu-inset {
-  box-shadow: inset 4px 4px 8px var(--color-neu-dark), inset -4px -4px 8px var(--color-neu-light);
-}
-@utility neu-inset-sm {
-  box-shadow: inset 2px 2px 4px var(--color-neu-dark), inset -2px -2px 4px var(--color-neu-light);
-}
-@utility neu-flat {
-  box-shadow: none;
+@utility card-shadow-lg {
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5), 0 4px 8px rgba(0, 0, 0, 0.3);
 }
 
+/* ── Light theme overrides ── */
 .light {
-  --color-neu-base: #dcdce0;
-  --color-neu-dark: #b8b8bc;
-  --color-neu-light: #ffffff;
+  --color-surface-base: #f4f4f5;
+  --color-surface-card: #ffffff;
+  --color-surface-raised: #fafafa;
+  --color-surface-overlay: #f4f4f5;
 
-  --color-text-primary: #1e1e22;
+  --color-border-default: #e4e4e7;
+  --color-border-muted: #f4f4f5;
+  --color-border-accent: #0d9488;
+
+  --color-text-primary: #09090b;
   --color-text-secondary: #52525b;
-  --color-text-muted: #71717a;
+  --color-text-muted: #a1a1aa;
+  --color-text-inverse: #fafafa;
 
-  --color-accent-teal: #0d9488;
-  --color-accent-teal-dim: #0f766e;
+  --color-accent-primary: #0d9488;
+  --color-accent-primary-hover: #0f766e;
+  --color-accent-primary-dim: #0f766e;
   --color-accent-amber: #d97706;
-  --color-accent-amber-dim: #b45309;
+  --color-accent-amber-hover: #b45309;
   --color-accent-red: #dc2626;
   --color-accent-blue: #2563eb;
+
+  --color-neu-base: var(--color-surface-base);
+  --color-neu-dark: #b8b8bc;
+  --color-neu-light: #ffffff;
+  --color-accent-teal: var(--color-accent-primary);
+  --color-accent-teal-dim: var(--color-accent-primary-dim);
 }
+
+.light .card-shadow { box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.06); }
+.light .card-shadow-hover { box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1), 0 2px 4px rgba(0, 0, 0, 0.06); }
+.light .card-shadow-lg { box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12), 0 4px 8px rgba(0, 0, 0, 0.06); }
