@@ -17,10 +17,10 @@ export const NeuInput = forwardRef<HTMLInputElement, NeuInputProps>(
         <input
           ref={ref}
           className={clsx(
-            'w-full px-4 py-2.5 rounded-xl bg-neu-base neu-inset-sm',
+            'w-full px-4 py-2.5 rounded-xl bg-surface-base border border-border-default',
             'text-text-primary placeholder:text-text-muted',
-            'outline-none focus:ring-2 focus:ring-accent-teal/30',
-            'transition-all duration-200',
+            'outline-none focus:border-accent-primary focus:ring-1 focus:ring-accent-primary/30',
+            'transition-all duration-150',
             className
           )}
           {...props}

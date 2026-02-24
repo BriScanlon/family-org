@@ -18,19 +18,19 @@ export function NeuModal({ open, onClose, title, children }: NeuModalProps) {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={onClose}
-            className="absolute inset-0 bg-black/60"
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
           />
           <motion.div
             initial={{ opacity: 0, scale: 0.95, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
-            className="relative w-full max-w-lg bg-neu-base neu-raised-lg rounded-2xl p-6"
+            className="relative w-full max-w-lg bg-surface-card border border-border-default card-shadow-lg rounded-2xl p-6"
           >
             <div className="flex justify-between items-center mb-6">
               <h3 className="text-xl font-bold text-text-primary">{title}</h3>
               <button
                 onClick={onClose}
-                className="text-text-muted hover:text-text-primary transition-colors"
+                className="p-1.5 rounded-lg text-text-muted hover:text-text-primary hover:bg-surface-raised transition-colors"
               >
                 <X className="h-5 w-5" />
               </button>
