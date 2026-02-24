@@ -63,6 +63,9 @@ function App() {
       setAlerts(alertsData || [])
       setLeagueTable(leagueData || [])
       setLoading(false)
+    }).catch(() => {
+      setUser(null)
+      setLoading(false)
     })
   }
 
@@ -92,6 +95,30 @@ function App() {
     })
       .then(res => res.json())
       .then(() => { toast.success('Chore created!'); fetchData() })
+  }
+
+  const handleEditChore = (choreId: number, chore: { title: string; points: number; reward_money: number; is_bonus: boolean; frequency: string }) => {
+    fetch(`/api/chores/${choreId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(chore)
+    })
+      .then(res => {
+        if (!res.ok) return res.json().then(data => { throw new Error(data.detail) })
+        return res.json()
+      })
+      .then(() => { toast.success('Chore updated!'); fetchData() })
+      .catch(err => { toast.error(err.message) })
+  }
+
+  const handleDeleteChore = (choreId: number) => {
+    fetch(`/api/chores/${choreId}`, { method: 'DELETE' })
+      .then(res => {
+        if (!res.ok) return res.json().then(data => { throw new Error(data.detail) })
+        return res.json()
+      })
+      .then(() => { toast.success('Chore deleted!'); fetchData() })
+      .catch(err => { toast.error(err.message) })
   }
 
   const handleCreateReward = (reward: { title: string; cost: number }) => {
@@ -182,6 +209,9 @@ function App() {
                 chores={chores}
                 onComplete={handleCompleteChore}
                 onCreate={handleCreateChore}
+                onEdit={handleEditChore}
+                onDelete={handleDeleteChore}
+                isParent={user.role === 'parent'}
               />
             )}
             {activeTab === 'rewards' && (

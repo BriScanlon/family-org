@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { NeuModal } from '../ui/NeuModal'
 import { NeuInput } from '../ui/NeuInput'
 import { NeuButton } from '../ui/NeuButton'
@@ -7,27 +7,46 @@ interface AddChoreModalProps {
   open: boolean
   onClose: () => void
   onSubmit: (chore: { title: string; points: number; reward_money: number; is_bonus: boolean; frequency: string }) => void
+  chore?: { title: string; points: number; reward_money: number; is_bonus: boolean; frequency: string } | null
 }
 
-export function AddChoreModal({ open, onClose, onSubmit }: AddChoreModalProps) {
-  const [title, setTitle] = useState('')
-  const [isBonus, setIsBonus] = useState(false)
-  const [frequency, setFrequency] = useState('daily')
-  const [points, setPoints] = useState(0)
-  const [rewardMoney, setRewardMoney] = useState(0)
+export function AddChoreModal({ open, onClose, onSubmit, chore }: AddChoreModalProps) {
+  const [title, setTitle] = useState(chore?.title || '')
+  const [isBonus, setIsBonus] = useState(chore?.is_bonus || false)
+  const [frequency, setFrequency] = useState(chore?.frequency || 'daily')
+  const [points, setPoints] = useState(chore?.points || 0)
+  const [rewardMoney, setRewardMoney] = useState(chore?.reward_money || 0)
+
+  useEffect(() => {
+    if (chore) {
+      setTitle(chore.title)
+      setIsBonus(chore.is_bonus)
+      setFrequency(chore.frequency)
+      setPoints(chore.points)
+      setRewardMoney(chore.reward_money)
+    } else {
+      setTitle('')
+      setIsBonus(false)
+      setFrequency('daily')
+      setPoints(0)
+      setRewardMoney(0)
+    }
+  }, [chore])
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     onSubmit({ title, points, reward_money: rewardMoney, is_bonus: isBonus, frequency })
-    setTitle('')
-    setPoints(0)
-    setRewardMoney(0)
-    setIsBonus(false)
-    setFrequency('daily')
+    if (!chore) {
+      setTitle('')
+      setPoints(0)
+      setRewardMoney(0)
+      setIsBonus(false)
+      setFrequency('daily')
+    }
   }
 
   return (
-    <NeuModal open={open} onClose={onClose} title="Add New Chore">
+    <NeuModal open={open} onClose={onClose} title={chore ? "Edit Chore" : "Add New Chore"}>
       <form onSubmit={handleSubmit} className="space-y-4">
         <NeuInput
           label="Chore Title"
@@ -89,7 +108,7 @@ export function AddChoreModal({ open, onClose, onSubmit }: AddChoreModalProps) {
 
         <div className="pt-2">
           <NeuButton type="submit" variant="teal" className="w-full" size="lg">
-            Create Chore
+            {chore ? 'Save Changes' : 'Create Chore'}
           </NeuButton>
         </div>
       </form>

@@ -9,10 +9,14 @@ interface ChoresViewProps {
   chores: Chore[]
   onComplete: (choreId: number) => void
   onCreate: (chore: { title: string; points: number; reward_money: number; is_bonus: boolean; frequency: string }) => void
+  onEdit: (choreId: number, chore: { title: string; points: number; reward_money: number; is_bonus: boolean; frequency: string }) => void
+  onDelete: (choreId: number) => void
+  isParent: boolean
 }
 
-export function ChoresView({ chores, onComplete, onCreate }: ChoresViewProps) {
+export function ChoresView({ chores, onComplete, onCreate, onEdit, onDelete, isParent }: ChoresViewProps) {
   const [showModal, setShowModal] = useState(false)
+  const [editingChore, setEditingChore] = useState<Chore | null>(null)
   const standardChoresDone = chores.filter(c => !c.is_bonus && !c.is_completed).length === 0
 
   return (
@@ -33,6 +37,9 @@ export function ChoresView({ chores, onComplete, onCreate }: ChoresViewProps) {
             chore={chore}
             onComplete={onComplete}
             standardChoresDone={standardChoresDone}
+            onEdit={setEditingChore}
+            onDelete={onDelete}
+            isParent={isParent}
           />
         ))}
       </div>
@@ -41,6 +48,13 @@ export function ChoresView({ chores, onComplete, onCreate }: ChoresViewProps) {
         open={showModal}
         onClose={() => setShowModal(false)}
         onSubmit={(chore) => { onCreate(chore); setShowModal(false) }}
+      />
+
+      <AddChoreModal
+        open={editingChore !== null}
+        onClose={() => setEditingChore(null)}
+        onSubmit={(chore) => { onEdit(editingChore!.id, chore); setEditingChore(null) }}
+        chore={editingChore}
       />
     </div>
   )
