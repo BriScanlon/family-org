@@ -6,6 +6,7 @@ from ..database import get_db
 from ..models import User, Chore
 from ..schemas import ChoreCreate, Chore as ChoreSchema
 
+from .auth import get_me
 from .dashboard import manager
 
 router = APIRouter(prefix="/chores", tags=["chores"])
@@ -75,6 +76,40 @@ async def complete_chore(chore_id: int, user_id: int, db: Session = Depends(get_
         "points_added": chore.points if not chore.is_bonus else 0,
         "money_added": chore.reward_money if chore.is_bonus else 0
     }
+
+@router.put("/{chore_id}")
+def update_chore(chore_id: int, chore_update: ChoreCreate, db: Session = Depends(get_db), current_user: User = Depends(get_me)):
+    if current_user.role != "parent":
+        raise HTTPException(status_code=403, detail="Only parents can edit chores")
+
+    chore = db.query(Chore).filter(Chore.id == chore_id).first()
+    if not chore:
+        raise HTTPException(status_code=404, detail="Chore not found")
+    if chore.source != "manual":
+        raise HTTPException(status_code=400, detail="Cannot edit synced chores")
+
+    chore.title = chore_update.title
+    chore.description = chore_update.description
+    chore.points = chore_update.points
+    chore.reward_money = chore_update.reward_money
+    chore.is_bonus = chore_update.is_bonus
+    chore.frequency = chore_update.frequency
+    db.commit()
+    db.refresh(chore)
+    return chore
+
+@router.delete("/{chore_id}")
+def delete_chore(chore_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_me)):
+    if current_user.role != "parent":
+        raise HTTPException(status_code=403, detail="Only parents can delete chores")
+
+    chore = db.query(Chore).filter(Chore.id == chore_id).first()
+    if not chore:
+        raise HTTPException(status_code=404, detail="Chore not found")
+
+    db.delete(chore)
+    db.commit()
+    return {"status": "deleted"}
 
 @router.get("/user/{user_id}", response_model=List[ChoreSchema])
 def read_user_chores(user_id: int, db: Session = Depends(get_db)):
