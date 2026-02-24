@@ -175,7 +175,46 @@ async def process_sync(message_body: dict):
         except Exception as e:
             print(f"[Worker] Error in tasks_sync: {e}")
 
+    elif msg_type == "go4schools_sync":
+        try:
+            from .services.go4schools import scrape_homework
+            result = await scrape_homework(user, db)
+            prefs = dict(user.preferences or {})
+            if result["error"]:
+                prefs["go4schools_error"] = result["error"]
+                print(f"[Worker] Go4Schools error for {user.email}: {result['error']}")
+            else:
+                prefs.pop("go4schools_error", None)
+                print(f"[Worker] Synced {result['synced']} homework items for {user.email}")
+            prefs["go4schools_last_sync"] = datetime.now(timezone.utc).isoformat()
+            user.preferences = prefs
+            db.add(user)
+            db.commit()
+
+            from .services.rabbitmq import send_sync_message
+            await send_sync_message("dashboard_refresh", {"user_id": user_id}, routing_key="broadcast_queue")
+        except Exception as e:
+            print(f"[Worker] Go4Schools fatal error: {e}")
+
     db.close()
+
+async def go4schools_daily_sync():
+    """Daily task to sync Go4Schools homework for all connected users."""
+    while True:
+        # Initial delay of 1 hour (offset from chore reset)
+        await asyncio.sleep(3600)
+        try:
+            db: Session = SessionLocal()
+            users = db.query(User).filter(User.go4schools_email.isnot(None)).all()
+            for user in users:
+                from .services.rabbitmq import send_sync_message
+                await send_sync_message("go4schools_sync", {"user_id": user.id})
+                print(f"[Worker] Queued Go4Schools sync for {user.email}")
+            db.close()
+        except Exception as e:
+            print(f"[Worker] Error in go4schools_daily_sync: {e}")
+        # Wait remaining ~23 hours
+        await asyncio.sleep(82800)
 
 async def main():
     for i in range(10):
@@ -194,6 +233,7 @@ async def main():
 
     # Start recurring reset task
     asyncio.create_task(reset_chores_task())
+    asyncio.create_task(go4schools_daily_sync())
 
     async with queue.iterator() as queue_iter:
         async for message in queue_iter:
