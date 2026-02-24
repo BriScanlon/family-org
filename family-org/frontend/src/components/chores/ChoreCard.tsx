@@ -36,11 +36,21 @@ export function ChoreCard({ chore, onComplete, standardChoresDone }: ChoreCardPr
           )}
         </div>
         <h3 className={clsx(
-          'text-lg font-semibold',
+          'text-lg font-semibold flex items-center',
           chore.is_completed ? 'text-text-muted line-through' : 'text-text-primary'
         )}>
           {chore.title}
+          {chore.source === 'go4schools' && (
+            <span className="text-[10px] font-bold text-accent-teal bg-accent-teal/15 px-2 py-0.5 rounded-full uppercase ml-2">
+              Homework
+            </span>
+          )}
         </h3>
+        {chore.due_date && (
+          <span className="text-xs text-text-muted">
+            Due: {new Date(chore.due_date).toLocaleDateString()}
+          </span>
+        )}
       </div>
 
       <button
