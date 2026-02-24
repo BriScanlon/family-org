@@ -11,10 +11,11 @@ interface ChoresViewProps {
   onCreate: (chore: { title: string; points: number; reward_money: number; is_bonus: boolean; frequency: string }) => void
   onEdit: (choreId: number, chore: { title: string; points: number; reward_money: number; is_bonus: boolean; frequency: string }) => void
   onDelete: (choreId: number) => void
+  onUncomplete: (choreId: number) => void
   isParent: boolean
 }
 
-export function ChoresView({ chores, onComplete, onCreate, onEdit, onDelete, isParent }: ChoresViewProps) {
+export function ChoresView({ chores, onComplete, onCreate, onEdit, onDelete, onUncomplete, isParent }: ChoresViewProps) {
   const [showModal, setShowModal] = useState(false)
   const [editingChore, setEditingChore] = useState<Chore | null>(null)
   const standardChoresDone = chores.filter(c => !c.is_bonus && !c.is_completed).length === 0
@@ -39,6 +40,7 @@ export function ChoresView({ chores, onComplete, onCreate, onEdit, onDelete, isP
             standardChoresDone={standardChoresDone}
             onEdit={setEditingChore}
             onDelete={onDelete}
+            onUncomplete={onUncomplete}
             isParent={isParent}
           />
         ))}

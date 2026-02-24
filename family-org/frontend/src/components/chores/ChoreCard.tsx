@@ -1,4 +1,4 @@
-import { CheckCircle2, Lock, Pencil, Trash2 } from 'lucide-react'
+import { CheckCircle2, Lock, Pencil, Trash2, Undo2 } from 'lucide-react'
 import clsx from 'clsx'
 import { motion } from 'framer-motion'
 import type { Chore } from '../../types'
@@ -9,10 +9,11 @@ interface ChoreCardProps {
   standardChoresDone: boolean
   onEdit?: (chore: Chore) => void
   onDelete?: (choreId: number) => void
+  onUncomplete?: (choreId: number) => void
   isParent?: boolean
 }
 
-export function ChoreCard({ chore, onComplete, standardChoresDone, onEdit, onDelete, isParent }: ChoreCardProps) {
+export function ChoreCard({ chore, onComplete, standardChoresDone, onEdit, onDelete, onUncomplete, isParent }: ChoreCardProps) {
   const isLocked = chore.is_bonus && !standardChoresDone
   const canComplete = !chore.is_completed && !isLocked
 
@@ -74,24 +75,32 @@ export function ChoreCard({ chore, onComplete, standardChoresDone, onEdit, onDel
         )}
       </div>
 
-      <button
-        onClick={() => canComplete && onComplete(chore.id)}
-        disabled={!canComplete}
-        className={clsx(
-          'w-full py-2 rounded-xl text-sm font-semibold transition-all duration-200 flex items-center justify-center gap-2',
-          chore.is_completed
-            ? 'neu-inset-sm text-accent-teal'
-            : isLocked
-              ? 'neu-flat text-text-muted cursor-not-allowed'
-              : 'bg-accent-teal text-neu-base hover:bg-accent-teal/90 active:neu-inset-sm'
-        )}
-      >
-        {chore.is_completed ? (
-          <><CheckCircle2 className="h-4 w-4" /> Done</>
-        ) : isLocked ? (
-          <><Lock className="h-4 w-4" /> Locked</>
-        ) : 'Mark Complete'}
-      </button>
+      {chore.is_completed ? (
+        <div className="flex gap-2">
+          <span className="flex-1 py-2 rounded-xl text-sm font-semibold neu-inset-sm text-accent-teal flex items-center justify-center gap-2">
+            <CheckCircle2 className="h-4 w-4" /> Done
+          </span>
+          {isParent && (
+            <button
+              onClick={() => onUncomplete?.(chore.id)}
+              className="px-3 py-2 rounded-xl text-sm font-semibold neu-raised-sm text-text-muted hover:text-accent-amber transition-colors flex items-center gap-1"
+            >
+              <Undo2 className="h-4 w-4" /> Undo
+            </button>
+          )}
+        </div>
+      ) : isLocked ? (
+        <button disabled className="w-full py-2 rounded-xl text-sm font-semibold neu-flat text-text-muted cursor-not-allowed flex items-center justify-center gap-2">
+          <Lock className="h-4 w-4" /> Locked
+        </button>
+      ) : (
+        <button
+          onClick={() => onComplete(chore.id)}
+          className="w-full py-2 rounded-xl text-sm font-semibold bg-accent-teal text-neu-base hover:bg-accent-teal/90 active:neu-inset-sm transition-all duration-200 flex items-center justify-center gap-2"
+        >
+          Mark Complete
+        </button>
+      )}
     </motion.div>
   )
 }

@@ -121,6 +121,16 @@ function App() {
       .catch(err => { toast.error(err.message) })
   }
 
+  const handleUncompleteChore = (choreId: number) => {
+    fetch(`/api/chores/${choreId}/uncomplete`, { method: 'PUT' })
+      .then(res => {
+        if (!res.ok) return res.json().then(data => { throw new Error(data.detail) })
+        return res.json()
+      })
+      .then(() => { toast.info('Chore completion undone'); fetchData() })
+      .catch(err => { toast.error(err.message) })
+  }
+
   const handleCreateReward = (reward: { title: string; cost: number }) => {
     fetch('/api/rewards/', {
       method: 'POST',
@@ -211,6 +221,7 @@ function App() {
                 onCreate={handleCreateChore}
                 onEdit={handleEditChore}
                 onDelete={handleDeleteChore}
+                onUncomplete={handleUncompleteChore}
                 isParent={user.role === 'parent'}
               />
             )}
