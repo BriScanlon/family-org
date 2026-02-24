@@ -1,3 +1,4 @@
+from datetime import datetime
 from pydantic import BaseModel
 from typing import List, Optional
 
@@ -49,7 +50,7 @@ class Chore(ChoreBase):
     assignee_id: Optional[int] = None
     source: str = "manual"
     source_id: Optional[str] = None
-    due_date: Optional[str] = None
+    due_date: Optional[datetime] = None
     personal: bool = False
 
     model_config = {
