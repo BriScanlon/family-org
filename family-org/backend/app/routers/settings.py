@@ -4,7 +4,9 @@ from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
 from ..database import get_db
 from ..models import User
-from ..schemas import PreferencesUpdate
+from ..schemas import PreferencesUpdate, Go4SchoolsConnect
+from ..services.encryption import encrypt
+from ..services.rabbitmq import send_sync_message
 from ..config import settings
 from .auth import get_me
 
@@ -54,7 +56,6 @@ async def update_synced_calendars(calendar_ids: list[str], db: Session = Depends
     db.commit()
     
     # Trigger an immediate sync for the new calendars
-    from ..services.rabbitmq import send_sync_message
     await send_sync_message("calendar_sync", {"user_id": current_user.id})
     
     return {"status": "success", "synced_calendars": current_user.synced_calendars}
@@ -66,3 +67,51 @@ async def become_parent(db: Session = Depends(get_db), current_user: User = Depe
     db.add(current_user)
     db.commit()
     return {"status": "success", "role": current_user.role}
+
+
+@router.post("/go4schools")
+async def connect_go4schools(creds: Go4SchoolsConnect, db: Session = Depends(get_db), current_user: User = Depends(get_me)):
+    current_user.go4schools_email = creds.email
+    current_user.go4schools_password = encrypt(creds.password)
+    # Clear any previous error
+    prefs = dict(current_user.preferences or {})
+    prefs.pop("go4schools_error", None)
+    prefs["go4schools_last_sync"] = None
+    current_user.preferences = prefs
+    db.add(current_user)
+    db.commit()
+    # Trigger immediate sync
+    await send_sync_message("go4schools_sync", {"user_id": current_user.id})
+    return {"status": "connected"}
+
+
+@router.delete("/go4schools")
+def disconnect_go4schools(db: Session = Depends(get_db), current_user: User = Depends(get_me)):
+    current_user.go4schools_email = None
+    current_user.go4schools_password = None
+    prefs = dict(current_user.preferences or {})
+    prefs.pop("go4schools_error", None)
+    prefs.pop("go4schools_last_sync", None)
+    current_user.preferences = prefs
+    db.add(current_user)
+    db.commit()
+    return {"status": "disconnected"}
+
+
+@router.post("/go4schools/sync")
+async def sync_go4schools(current_user: User = Depends(get_me)):
+    if not current_user.go4schools_email:
+        raise HTTPException(status_code=400, detail="Go4Schools not connected")
+    await send_sync_message("go4schools_sync", {"user_id": current_user.id})
+    return {"status": "sync_triggered"}
+
+
+@router.get("/go4schools/status")
+def go4schools_status(current_user: User = Depends(get_me)):
+    prefs = current_user.preferences or {}
+    return {
+        "connected": current_user.go4schools_email is not None,
+        "email": current_user.go4schools_email,
+        "last_sync": prefs.get("go4schools_last_sync"),
+        "error": prefs.get("go4schools_error"),
+    }

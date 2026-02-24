@@ -22,10 +22,15 @@ class User(UserBase):
 
 class PreferencesUpdate(BaseModel):
     theme: Optional[str] = None
+    show_league_table: Optional[bool] = None
 
     model_config = {
         "extra": "forbid"
     }
+
+class Go4SchoolsConnect(BaseModel):
+    email: str
+    password: str
 
 class ChoreBase(BaseModel):
     title: str
