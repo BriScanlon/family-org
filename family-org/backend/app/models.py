@@ -20,6 +20,8 @@ class User(Base):
     google_access_token = Column(String, nullable=True)
     google_refresh_token = Column(String, nullable=True)
     preferences = Column(JSON, default=dict, nullable=False, server_default="{}")
+    go4schools_email = Column(String, nullable=True)
+    go4schools_password = Column(String, nullable=True)  # Fernet-encrypted
 
     chores = relationship("Chore", back_populates="assignee")
     rewards = relationship("Reward", back_populates="redeemer")
@@ -40,6 +42,9 @@ class Chore(Base):
     last_completed_at = Column(DateTime, nullable=True)
     created_at = Column(DateTime, server_default=func.now())
     frequency = Column(String, default="daily") # daily, weekly, monthly, once
+    source = Column(String, default="manual")  # "manual" or "go4schools"
+    source_id = Column(String, nullable=True, unique=True, index=True)  # dedup key
+    due_date = Column(DateTime, nullable=True)
     assignee_id = Column(Integer, ForeignKey("users.id"))
 
     assignee = relationship("User", back_populates="chores")
