@@ -47,6 +47,9 @@ class Chore(ChoreBase):
     id: int
     is_completed: bool
     assignee_id: Optional[int] = None
+    source: str = "manual"
+    source_id: Optional[str] = None
+    due_date: Optional[str] = None
 
     model_config = {
         "from_attributes": True

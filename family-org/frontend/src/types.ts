@@ -17,6 +17,8 @@ export interface Chore {
   is_completed: boolean
   is_bonus: boolean
   frequency: string
+  source: string
+  due_date?: string
 }
 
 export interface Reward {
