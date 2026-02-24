@@ -23,28 +23,28 @@ export function Dashboard({
   return (
     <div className="space-y-6">
       {alerts.length > 0 && (
-        <div className="space-y-3">
+        <div className="space-y-2">
           {alerts.map(alert => (
             <div
               key={alert.id}
-              className="neu-raised-sm rounded-xl p-4 flex items-center justify-between"
+              className="flex items-center justify-between gap-3 px-4 py-3 rounded-xl bg-accent-amber/10 border border-accent-amber/20"
             >
-              <div className="flex items-center gap-3">
-                <AlertTriangle className="h-5 w-5 text-accent-amber flex-shrink-0" />
-                <p className="text-sm font-medium text-text-primary">{alert.message}</p>
+              <div className="flex items-center gap-3 min-w-0">
+                <AlertTriangle className="h-4 w-4 text-accent-amber flex-shrink-0" />
+                <p className="text-sm text-text-primary truncate">{alert.message}</p>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1 shrink-0">
                 <button
                   onClick={() => onAlertFeedback(alert.id, 1)}
-                  className="p-1.5 hover:bg-neu-light/30 rounded-lg text-text-muted hover:text-accent-teal transition-colors"
+                  className="p-1.5 hover:bg-accent-primary/10 rounded-lg text-text-muted hover:text-accent-primary transition-colors"
                 >
-                  <ThumbsUp className="h-4 w-4" />
+                  <ThumbsUp className="h-3.5 w-3.5" />
                 </button>
                 <button
                   onClick={() => onAlertFeedback(alert.id, -1)}
-                  className="p-1.5 hover:bg-neu-light/30 rounded-lg text-text-muted hover:text-accent-red transition-colors"
+                  className="p-1.5 hover:bg-accent-red/10 rounded-lg text-text-muted hover:text-accent-red transition-colors"
                 >
-                  <ThumbsDown className="h-4 w-4" />
+                  <ThumbsDown className="h-3.5 w-3.5" />
                 </button>
               </div>
             </div>
@@ -54,13 +54,15 @@ export function Dashboard({
 
       <SummaryStrip chores={chores} events={events} user={user} />
 
-      <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
-        <div className="lg:col-span-3 space-y-6">
+      <div className="grid grid-cols-1 lg:grid-cols-6 gap-4">
+        <div className="lg:col-span-4">
           <ChoreChecklist chores={chores} onComplete={onCompleteChore} />
         </div>
-        <div className="lg:col-span-2 space-y-6">
+        <div className="lg:col-span-2 space-y-4">
           <UpcomingEvents events={events} onViewAll={onViewCalendar} />
-          <LeagueTable entries={leagueTable} currentUserId={user.id} />
+          {leagueTable.length > 0 && (
+            <LeagueTable entries={leagueTable} currentUserId={user.id} />
+          )}
         </div>
       </div>
     </div>
