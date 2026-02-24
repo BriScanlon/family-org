@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Request
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from typing import List
@@ -12,8 +12,28 @@ from .dashboard import manager
 router = APIRouter(prefix="/chores", tags=["chores"])
 
 @router.get("/", response_model=List[ChoreSchema])
-def read_chores(db: Session = Depends(get_db)):
-    return db.query(Chore).all()
+def read_chores(db: Session = Depends(get_db), request: Request = None):
+    from ..services.auth_service import verify_token
+    # Try to get current user from cookie for personal chore filtering
+    user_id = None
+    if request:
+        token = request.cookies.get("access_token")
+        if token:
+            payload = verify_token(token)
+            if payload:
+                from ..models import User as UserModel
+                user = db.query(UserModel).filter(UserModel.email == payload.get("sub")).first()
+                if user:
+                    user_id = user.id
+
+    if user_id:
+        # Show all non-personal chores + personal chores assigned to this user
+        return db.query(Chore).filter(
+            (Chore.personal == False) | (Chore.assignee_id == user_id)
+        ).all()
+    else:
+        # No auth — show only non-personal chores
+        return db.query(Chore).filter(Chore.personal == False).all()
 
 @router.post("/", response_model=ChoreSchema)
 def create_chore(chore: ChoreCreate, db: Session = Depends(get_db)):

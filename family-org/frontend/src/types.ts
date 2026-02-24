@@ -19,6 +19,7 @@ export interface Chore {
   frequency: string
   source: string
   due_date?: string
+  personal: boolean
 }
 
 export interface Reward {

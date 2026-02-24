@@ -45,6 +45,7 @@ class Chore(Base):
     source = Column(String, default="manual")  # "manual" or "go4schools"
     source_id = Column(String, nullable=True, unique=True, index=True)  # dedup key
     due_date = Column(DateTime, nullable=True)
+    personal = Column(Boolean, default=False)  # Only visible to assignee
     assignee_id = Column(Integer, ForeignKey("users.id"))
 
     assignee = relationship("User", back_populates="chores")

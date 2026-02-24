@@ -50,6 +50,7 @@ class Chore(ChoreBase):
     source: str = "manual"
     source_id: Optional[str] = None
     due_date: Optional[str] = None
+    personal: bool = False
 
     model_config = {
         "from_attributes": True
