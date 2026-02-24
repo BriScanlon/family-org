@@ -72,10 +72,42 @@ async def complete_chore(chore_id: int, user_id: int, db: Session = Depends(get_
     })
     
     return {
-        "status": "success", 
+        "status": "success",
         "points_added": chore.points if not chore.is_bonus else 0,
         "money_added": chore.reward_money if chore.is_bonus else 0
     }
+
+@router.put("/{chore_id}/uncomplete")
+async def uncomplete_chore(chore_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_me)):
+    if current_user.role != "parent":
+        raise HTTPException(status_code=403, detail="Only parents can undo chore completion")
+
+    chore = db.query(Chore).filter(Chore.id == chore_id).first()
+    if not chore:
+        raise HTTPException(status_code=404, detail="Chore not found")
+
+    if not chore.is_completed:
+        raise HTTPException(status_code=400, detail="Chore is not completed")
+
+    # Reverse the points/balance awarded
+    if chore.assignee_id:
+        user = db.query(User).filter(User.id == chore.assignee_id).first()
+        if user:
+            if chore.is_bonus:
+                user.balance = max(0, user.balance - chore.reward_money)
+            else:
+                user.points = max(0, user.points - chore.points)
+
+    chore.is_completed = False
+    chore.last_completed_at = None
+    db.commit()
+
+    await manager.broadcast({
+        "type": "CHORE_UNCOMPLETED",
+        "chore_id": chore_id,
+    })
+
+    return {"status": "success"}
 
 @router.put("/{chore_id}")
 def update_chore(chore_id: int, chore_update: ChoreCreate, db: Session = Depends(get_db), current_user: User = Depends(get_me)):
