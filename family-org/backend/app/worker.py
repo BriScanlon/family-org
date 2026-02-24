@@ -57,6 +57,9 @@ async def reset_chores_task():
                 alert = agent.analyze_user_schedule(user.id)
                 if alert:
                     print(f"[Worker] AI Alert generated for {user.email}: {alert.message}")
+                tasks = agent.generate_event_tasks(user.id)
+                if tasks:
+                    print(f"[Worker] AI created {len(tasks)} personal tasks for {user.email}")
             
             db.close()
         except Exception as e:
