@@ -18,32 +18,32 @@ export function Navbar({ user, activeTab, onTabChange }: NavbarProps) {
   const { theme, toggleTheme } = useTheme()
 
   return (
-    <nav className="sticky top-0 z-50 bg-neu-base neu-raised-sm border-b border-neu-dark/50">
+    <nav className="sticky top-0 z-50 bg-surface-card/80 backdrop-blur-md border-b border-border-default">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-16 items-center">
           <div className="flex items-center space-x-8">
             <div
-              className="flex items-center gap-2 cursor-pointer"
+              className="flex items-center gap-2.5 cursor-pointer"
               onClick={() => onTabChange('dashboard')}
             >
-              <div className="bg-accent-teal text-neu-base p-1.5 rounded-lg">
+              <div className="bg-accent-primary text-text-inverse p-1.5 rounded-lg">
                 <Zap className="h-5 w-5" />
               </div>
-              <span className="font-bold text-lg tracking-tight text-text-primary">
+              <span className="font-extrabold text-lg tracking-tight text-text-primary">
                 FamilyOrg
               </span>
             </div>
 
-            <div className="hidden md:flex space-x-1">
+            <div className="hidden md:flex items-center bg-surface-base rounded-xl p-1">
               {(['dashboard', 'calendar', 'chores', 'rewards'] as Tab[]).map((tab) => (
                 <button
                   key={tab}
                   onClick={() => onTabChange(tab)}
                   className={clsx(
-                    'px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200',
+                    'px-4 py-1.5 rounded-lg text-sm font-medium transition-all duration-150',
                     activeTab === tab
-                      ? 'neu-inset-sm text-accent-teal'
-                      : 'text-text-secondary hover:text-text-primary'
+                      ? 'bg-surface-card text-accent-primary card-shadow'
+                      : 'text-text-muted hover:text-text-primary'
                   )}
                 >
                   {tab.charAt(0).toUpperCase() + tab.slice(1)}
@@ -52,20 +52,17 @@ export function Navbar({ user, activeTab, onTabChange }: NavbarProps) {
             </div>
           </div>
 
-          <div className="flex items-center gap-4">
-            <div className="hidden md:flex items-center gap-2 neu-inset-sm px-3 py-1.5 rounded-full">
+          <div className="flex items-center gap-3">
+            <div className="hidden md:flex items-center gap-2 bg-surface-base rounded-xl px-3 py-1.5 border border-border-muted">
               <Wallet className="h-4 w-4 text-accent-amber" />
-              <span className="text-xs font-semibold text-text-muted uppercase tracking-wide">
-                Balance
-              </span>
-              <span className="font-bold text-accent-amber">
+              <span className="font-bold text-accent-amber text-sm">
                 £{user.balance.toFixed(2)}
               </span>
             </div>
 
             <button
               onClick={toggleTheme}
-              className="p-2 rounded-xl text-text-secondary hover:text-text-primary transition-all hover:neu-raised-sm"
+              className="p-2 rounded-xl text-text-muted hover:text-text-primary hover:bg-surface-raised transition-all"
               title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
             >
               {theme === 'dark' ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
@@ -74,9 +71,9 @@ export function Navbar({ user, activeTab, onTabChange }: NavbarProps) {
             <div className="relative">
               <button
                 onClick={() => setShowUserMenu(!showUserMenu)}
-                className="flex items-center gap-2 p-1.5 rounded-full transition-all hover:neu-raised-sm"
+                className="flex items-center gap-2 p-1 rounded-full transition-all hover:ring-2 hover:ring-accent-primary/30"
               >
-                <div className="h-9 w-9 rounded-full bg-accent-teal text-neu-base flex items-center justify-center font-bold text-sm neu-raised-sm">
+                <div className="h-9 w-9 rounded-full bg-accent-primary text-text-inverse flex items-center justify-center font-bold text-sm">
                   {user.name.charAt(0)}
                 </div>
               </button>
@@ -84,26 +81,26 @@ export function Navbar({ user, activeTab, onTabChange }: NavbarProps) {
               <AnimatePresence>
                 {showUserMenu && (
                   <motion.div
-                    initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                    initial={{ opacity: 0, y: 8, scale: 0.95 }}
                     animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                    exit={{ opacity: 0, y: 8, scale: 0.95 }}
                     transition={{ duration: 0.1 }}
-                    className="absolute right-0 mt-2 w-56 bg-neu-base neu-raised-lg rounded-xl py-1 z-50 origin-top-right"
+                    className="absolute right-0 mt-2 w-56 bg-surface-card border border-border-default card-shadow-lg rounded-xl overflow-hidden z-50 origin-top-right"
                   >
-                    <div className="px-4 py-3 border-b border-neu-light/50">
+                    <div className="px-4 py-3 border-b border-border-default">
                       <p className="text-sm font-medium text-text-primary">{user.name}</p>
                       <p className="text-xs text-text-muted truncate">{user.email}</p>
                     </div>
                     <button
                       onClick={() => { onTabChange('settings'); setShowUserMenu(false) }}
-                      className="flex w-full items-center px-4 py-2 text-sm text-text-secondary hover:text-text-primary hover:bg-neu-light/30"
+                      className="flex w-full items-center px-4 py-2.5 text-sm text-text-secondary hover:text-text-primary hover:bg-surface-raised transition-colors"
                     >
                       <Settings className="mr-3 h-4 w-4 text-text-muted" />
                       Settings
                     </button>
                     <button
                       onClick={() => (window.location.href = '/api/auth/logout')}
-                      className="flex w-full items-center px-4 py-2 text-sm text-accent-red hover:bg-accent-red/10"
+                      className="flex w-full items-center px-4 py-2.5 text-sm text-accent-red hover:bg-accent-red/10 transition-colors"
                     >
                       <LogOut className="mr-3 h-4 w-4" />
                       Sign out
