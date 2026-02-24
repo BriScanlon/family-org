@@ -4,20 +4,18 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     ports:
-      - "8090:8000"
+      - "${BACKEND_PORT}:8000"
     volumes:
       - ./backend/app:/app/app
     environment:
-      - DATABASE_URL=postgresql://user:password@db:5432/family_org
+      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
       - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672/
       - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
       - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
-      - GOOGLE_REDIRECT_URI=https://family.brian-scanlon.uk/api/auth/callback
-      - FRONTEND_URL=https://family.brian-scanlon.uk
-      - OLLAMA_HOST=http://host.docker.internal:11434
-      - OLLAMA_MODEL=deepseek-r1:latest
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
+      - GOOGLE_REDIRECT_URI=${PUBLIC_URL}/api/auth/callback
+      - FRONTEND_URL=${PUBLIC_URL}
+      - OLLAMA_HOST=${OLLAMA_HOST}
+      - OLLAMA_MODEL=${OLLAMA_MODEL}
     depends_on:
       - db
       - rabbitmq
@@ -32,15 +30,13 @@ services:
     volumes:
       - ./backend/app:/app/app
     environment:
-      - DATABASE_URL=postgresql://user:password@db:5432/family_org
+      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
       - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672/
       - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
       - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
-      - GOOGLE_REDIRECT_URI=https://family.brian-scanlon.uk/api/auth/callback
-      - OLLAMA_HOST=http://host.docker.internal:11434
-      - OLLAMA_MODEL=deepseek-r1:latest
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
+      - GOOGLE_REDIRECT_URI=${PUBLIC_URL}/api/auth/callback
+      - OLLAMA_HOST=${OLLAMA_HOST}
+      - OLLAMA_MODEL=${OLLAMA_MODEL}
     depends_on:
       - db
       - rabbitmq
@@ -52,12 +48,12 @@ services:
       context: ./frontend
       dockerfile: Dockerfile.dev
     ports:
-      - "5180:5173"
+      - "${FRONTEND_PORT}:5173"
     volumes:
       - ./frontend:/app
       - /app/node_modules
     environment:
-      - VITE_API_URL=https://family.brian-scanlon.uk/api
+      - VITE_API_URL=${PUBLIC_URL}/api
     depends_on:
       - backend
     networks:
@@ -66,19 +62,19 @@ services:
   rabbitmq:
     image: rabbitmq:3-management
     ports:
-      - "5680:5672"
-      - "15680:15672"
+      - "${RABBITMQ_PORT}:5672"
+      - "${RABBITMQ_MGMT_PORT}:15672"
     networks:
       - family-net
 
   db:
     image: postgres:15
     environment:
-      POSTGRES_USER: user
-      POSTGRES_PASSWORD: password
-      POSTGRES_DB: family_org
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
     ports:
-      - "5440:5432"
+      - "${POSTGRES_PORT}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
@@ -88,7 +84,7 @@ services:
     image: cloudflare/cloudflared:latest
     command: tunnel --no-autoupdate run
     environment:
-      - TUNNEL_TOKEN=eyJhIjoiZjAyNzAxY2VlMzhhNmVhZDFjYjA3NGEwNGJhMjUxMjAiLCJ0IjoiZWExMDYxYTgtZjk2NS00MjgzLTliNGUtY2QwODlhZDcxMmU1IiwicyI6IllUUXpaalE0WVdFdE5tVTVOeTAwTTJSbExXRTFNR1l0WkRRME56a3daakUyTmpVMiJ9
+      - TUNNEL_TOKEN=${TUNNEL_TOKEN}
     restart: always
     networks:
       - family-net
