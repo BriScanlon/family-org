@@ -3,14 +3,53 @@ import { CheckCircle2, Lock, Zap } from 'lucide-react'
 import clsx from 'clsx'
 import { NeuCard } from '../ui/NeuCard'
 import { NeuProgress } from '../ui/NeuProgress'
-import type { MyChoresResponse } from '../../types'
+import type { MyChoresResponse, FamilyChildOverview } from '../../types'
 
 interface ChoreChecklistProps {
   onComplete: (choreId: number) => void
+  userColor?: string
+  isParent?: boolean
 }
 
-export function ChoreChecklist({ onComplete }: ChoreChecklistProps) {
+function ChoreRow({ chore, onComplete, disabled }: {
+  chore: { id: number; title: string; points: number; frequency: string; is_completed: boolean }
+  onComplete: (id: number) => void
+  disabled?: boolean
+}) {
+  const isDisabled = chore.is_completed || disabled
+  return (
+    <button
+      onClick={() => !isDisabled && onComplete(chore.id)}
+      disabled={isDisabled}
+      className={clsx(
+        'w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-150 text-left group',
+        chore.is_completed ? 'opacity-50' : disabled ? 'opacity-30 cursor-not-allowed' : 'hover:bg-surface-raised active:scale-[0.99]'
+      )}
+    >
+      <div className={clsx(
+        'h-5 w-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors',
+        chore.is_completed
+          ? 'bg-accent-primary border-accent-primary text-text-inverse'
+          : 'border-border-default group-hover:border-accent-primary'
+      )}>
+        {chore.is_completed && <CheckCircle2 className="h-3.5 w-3.5" />}
+      </div>
+      <span className={clsx(
+        'text-sm font-medium flex-1',
+        chore.is_completed ? 'line-through text-text-muted' : 'text-text-primary'
+      )}>
+        {chore.title}
+      </span>
+      <span className="text-[10px] font-semibold text-text-muted uppercase tracking-wider bg-surface-raised px-2 py-0.5 rounded">
+        {chore.frequency}
+      </span>
+    </button>
+  )
+}
+
+export function ChoreChecklist({ onComplete, userColor, isParent }: ChoreChecklistProps) {
   const [data, setData] = useState<MyChoresResponse | null>(null)
+  const [familyData, setFamilyData] = useState<FamilyChildOverview[] | null>(null)
 
   const fetchMyChores = () => {
     fetch('/api/rosters/my-chores')
@@ -19,11 +58,24 @@ export function ChoreChecklist({ onComplete }: ChoreChecklistProps) {
       .catch(() => {})
   }
 
-  useEffect(() => { fetchMyChores() }, [])
+  const fetchFamilyOverview = () => {
+    fetch('/api/rosters/family-overview')
+      .then(r => r.ok ? r.json() : null)
+      .then(setFamilyData)
+      .catch(() => {})
+  }
+
+  useEffect(() => {
+    fetchMyChores()
+    if (isParent) fetchFamilyOverview()
+  }, [isParent])
 
   const handleComplete = (choreId: number) => {
     onComplete(choreId)
-    setTimeout(fetchMyChores, 500)
+    setTimeout(() => {
+      fetchMyChores()
+      if (isParent) fetchFamilyOverview()
+    }, 500)
   }
 
   if (!data) {
@@ -34,106 +86,145 @@ export function ChoreChecklist({ onComplete }: ChoreChecklistProps) {
     )
   }
 
-  const totalRosterChores = data.rosters.reduce((sum, r) => sum + r.total, 0)
-  const completedRosterChores = data.rosters.reduce((sum, r) => sum + r.completed, 0)
-  const totalStandard = totalRosterChores + data.unassigned.length
-  const completedStandard = completedRosterChores + data.unassigned.filter(c => c.is_completed).length
-
   return (
-    <NeuCard>
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-lg font-bold text-text-primary">Today's Chores</h2>
-        <span className="text-sm font-bold text-text-muted">
-          {completedStandard}/{totalStandard}
-        </span>
-      </div>
-
-      <NeuProgress value={completedStandard} max={totalStandard} className="mb-5" />
-
-      {/* Roster-grouped chores */}
-      {data.rosters.map(roster => (
-        <div key={roster.roster_id} className="mb-4">
-          <div className="flex items-center justify-between mb-2">
-            <p className="text-xs font-bold text-text-muted uppercase tracking-wider">{roster.roster_name}</p>
-            <span className="text-xs font-bold text-text-muted">{roster.completed}/{roster.total}</span>
-          </div>
-          <div className="space-y-1.5">
-            {roster.chores.map(chore => (
-              <button
-                key={chore.id}
-                onClick={() => !chore.is_completed && handleComplete(chore.id)}
-                disabled={chore.is_completed}
-                className={clsx(
-                  'w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-150 text-left group',
-                  chore.is_completed ? 'opacity-50' : 'hover:bg-surface-raised active:scale-[0.99]'
-                )}
-              >
-                <div className={clsx(
-                  'h-5 w-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors',
-                  chore.is_completed
-                    ? 'bg-accent-primary border-accent-primary text-text-inverse'
-                    : 'border-border-default group-hover:border-accent-primary'
-                )}>
-                  {chore.is_completed && <CheckCircle2 className="h-3.5 w-3.5" />}
+    <div className="space-y-6">
+      {/* Parent family overview */}
+      {isParent && familyData && familyData.length > 0 && (
+        <div className="space-y-4">
+          <h3 className="text-sm font-bold text-text-muted uppercase tracking-wider">Family Progress</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {familyData.map(child => {
+              const totalChores = child.rosters.reduce((s, r) => s + r.total, 0)
+              const totalDone = child.rosters.reduce((s, r) => s + r.completed, 0)
+              return (
+                <div
+                  key={child.user_id}
+                  className="rounded-2xl overflow-hidden"
+                  style={child.color ? { borderTop: `3px solid ${child.color}` } : undefined}
+                >
+                  <NeuCard className={child.color ? '!rounded-t-none' : undefined}>
+                    <div className="flex items-center justify-between mb-1">
+                      <h3 className="text-base font-bold text-text-primary">{child.user_name}</h3>
+                      <span className={clsx(
+                        'text-sm font-bold',
+                        totalDone === totalChores && totalChores > 0 ? 'text-accent-primary' : 'text-text-muted'
+                      )}>
+                        {totalDone}/{totalChores}
+                      </span>
+                    </div>
+                    <NeuProgress value={totalDone} max={totalChores} className="mb-3" />
+                    {child.rosters.map(roster => (
+                      <div key={roster.roster_id} className="space-y-1">
+                        {roster.chores.map(chore => (
+                          <div key={chore.id} className={clsx(
+                            'flex items-center gap-3 px-3 py-2 rounded-xl text-left',
+                            chore.is_completed ? 'opacity-50' : ''
+                          )}>
+                            <div className={clsx(
+                              'h-4 w-4 rounded-full border-2 flex items-center justify-center flex-shrink-0',
+                              chore.is_completed
+                                ? 'bg-accent-primary border-accent-primary text-text-inverse'
+                                : 'border-border-default'
+                            )}>
+                              {chore.is_completed && <CheckCircle2 className="h-3 w-3" />}
+                            </div>
+                            <span className={clsx(
+                              'text-sm font-medium flex-1',
+                              chore.is_completed ? 'line-through text-text-muted' : 'text-text-primary'
+                            )}>
+                              {chore.title}
+                            </span>
+                            <span className="text-[10px] font-semibold text-text-muted uppercase tracking-wider">
+                              {chore.frequency}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    ))}
+                    {totalChores === 0 && (
+                      <p className="text-xs text-text-muted text-center py-2">No chores assigned</p>
+                    )}
+                  </NeuCard>
                 </div>
-                <span className={clsx(
-                  'text-sm font-medium flex-1',
-                  chore.is_completed ? 'line-through text-text-muted' : 'text-text-primary'
-                )}>
-                  {chore.title}
-                </span>
-                <span className="text-[10px] font-semibold text-text-muted uppercase tracking-wider bg-surface-raised px-2 py-0.5 rounded">
-                  {chore.frequency}
-                </span>
-              </button>
-            ))}
-          </div>
-        </div>
-      ))}
-
-      {/* Unassigned chores (Go4Schools, AI, legacy) */}
-      {data.unassigned.length > 0 && (
-        <div className="mb-4">
-          {data.rosters.length > 0 && (
-            <p className="text-xs font-bold text-text-muted uppercase tracking-wider mb-2">Other</p>
-          )}
-          <div className="space-y-1.5">
-            {data.unassigned.map(chore => (
-              <button
-                key={chore.id}
-                onClick={() => !chore.is_completed && handleComplete(chore.id)}
-                disabled={chore.is_completed}
-                className={clsx(
-                  'w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-150 text-left group',
-                  chore.is_completed ? 'opacity-50' : 'hover:bg-surface-raised active:scale-[0.99]'
-                )}
-              >
-                <div className={clsx(
-                  'h-5 w-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors',
-                  chore.is_completed
-                    ? 'bg-accent-primary border-accent-primary text-text-inverse'
-                    : 'border-border-default group-hover:border-accent-primary'
-                )}>
-                  {chore.is_completed && <CheckCircle2 className="h-3.5 w-3.5" />}
-                </div>
-                <span className={clsx(
-                  'text-sm font-medium flex-1',
-                  chore.is_completed ? 'line-through text-text-muted' : 'text-text-primary'
-                )}>
-                  {chore.title}
-                </span>
-                <span className="text-[10px] font-semibold text-text-muted uppercase tracking-wider bg-surface-raised px-2 py-0.5 rounded">
-                  {chore.frequency}
-                </span>
-              </button>
-            ))}
+              )
+            })}
           </div>
         </div>
       )}
 
+      {/* Roster cards (own chores for children) */}
+      {data.rosters.length > 0 && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {data.rosters.map(roster => (
+            <div
+              key={roster.roster_id}
+              className="rounded-2xl overflow-hidden"
+              style={userColor ? { borderTop: `3px solid ${userColor}` } : undefined}
+            >
+              <NeuCard className="!rounded-t-none">
+                <div className="flex items-center justify-between mb-1">
+                  <h3 className="text-base font-bold text-text-primary">{roster.roster_name}</h3>
+                  <span className={clsx(
+                    'text-sm font-bold',
+                    roster.completed === roster.total ? 'text-accent-primary' : 'text-text-muted'
+                  )}>
+                    {roster.completed}/{roster.total}
+                  </span>
+                </div>
+                <NeuProgress value={roster.completed} max={roster.total} className="mb-3" />
+                <div className="space-y-1">
+                  {roster.chores.map(chore => (
+                    <ChoreRow key={chore.id} chore={chore} onComplete={handleComplete} />
+                  ))}
+                </div>
+              </NeuCard>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Remaining unassigned chores */}
+      {data.unassigned.length > 0 && (
+        <NeuCard>
+          <h3 className="text-sm font-bold text-text-muted uppercase tracking-wider mb-3">
+            Other Tasks
+          </h3>
+          <div className="divide-y divide-border-muted">
+            {data.unassigned.map(chore => (
+              <div key={chore.id} className="flex items-center gap-3 py-2.5 first:pt-0 last:pb-0">
+                <button
+                  onClick={() => !chore.is_completed && handleComplete(chore.id)}
+                  disabled={chore.is_completed}
+                  className={clsx(
+                    'h-5 w-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors',
+                    chore.is_completed
+                      ? 'bg-accent-primary border-accent-primary text-text-inverse'
+                      : 'border-border-default hover:border-accent-primary cursor-pointer'
+                  )}
+                >
+                  {chore.is_completed && <CheckCircle2 className="h-3.5 w-3.5" />}
+                </button>
+                <span className={clsx(
+                  'text-sm font-medium flex-1',
+                  chore.is_completed ? 'line-through text-text-muted' : 'text-text-primary'
+                )}>
+                  {chore.title}
+                </span>
+                <span className="text-[10px] font-semibold text-text-muted uppercase tracking-wider">
+                  {chore.frequency}
+                </span>
+                <span className="text-xs font-bold text-accent-primary">
+                  {chore.points} pts
+                </span>
+              </div>
+            ))}
+          </div>
+        </NeuCard>
+      )}
+
       {/* Bonus section */}
       {data.bonus_chores.length > 0 && (
-        <div className="mt-5 pt-5 border-t border-border-default">
+        <NeuCard>
           <div className="flex items-center gap-2 mb-3">
             <Zap className="h-4 w-4 text-accent-amber" />
             <h3 className="text-sm font-bold text-text-primary">Bonus Jobs</h3>
@@ -148,7 +239,7 @@ export function ChoreChecklist({ onComplete }: ChoreChecklistProps) {
             </div>
           )}
 
-          <div className="space-y-1.5">
+          <div className="space-y-1">
             {data.bonus_chores.map(chore => (
               <button
                 key={chore.id}
@@ -188,8 +279,8 @@ export function ChoreChecklist({ onComplete }: ChoreChecklistProps) {
               </button>
             ))}
           </div>
-        </div>
+        </NeuCard>
       )}
-    </NeuCard>
+    </div>
   )
 }

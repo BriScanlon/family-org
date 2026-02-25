@@ -179,7 +179,7 @@ function App() {
             <Zap className="h-8 w-8" />
           </div>
           <h1 className="text-3xl font-extrabold text-text-primary tracking-tight mb-1">
-            FamilyOrg
+            Scanlon Plan
           </h1>
           <p className="text-text-muted mb-8 text-sm">Organize your family life</p>
           <NeuButton variant="teal" size="lg" className="w-full" onClick={handleLogin}>

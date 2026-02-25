@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Check, ShieldCheck, Calendar as CalendarIcon, Save, Sun, Moon, Trophy, GraduationCap } from 'lucide-react'
+import { Check, ShieldCheck, Calendar as CalendarIcon, Save, Sun, Moon, Trophy, GraduationCap, Palette } from 'lucide-react'
 import { toast } from 'react-toastify'
 import clsx from 'clsx'
 import { NeuCard } from '../ui/NeuCard'
@@ -24,14 +24,20 @@ export function SettingsView({ user, onUpdate }: SettingsViewProps) {
   } | null>(null)
   const [g4sSaving, setG4sSaving] = useState(false)
   const { theme, toggleTheme } = useTheme()
+  const [userColor, setUserColor] = useState<string>((user.preferences?.color as string) || '#6366f1')
+  const [colorSaving, setColorSaving] = useState(false)
 
   useEffect(() => {
     fetch('/api/settings/calendars')
-      .then(res => res.json())
+      .then(res => {
+        if (!res.ok) return []
+        return res.json()
+      })
       .then(data => {
-        setCalendars(data)
+        setCalendars(Array.isArray(data) ? data : [])
         setLoading(false)
       })
+      .catch(() => setLoading(false))
   }, [])
 
   useEffect(() => {
@@ -163,6 +169,39 @@ export function SettingsView({ user, onUpdate }: SettingsViewProps) {
               {theme === 'dark' ? 'Light Mode' : 'Dark Mode'}
             </span>
           </NeuButton>
+        </div>
+
+        <div className="flex items-center justify-between p-4 rounded-xl bg-surface-raised border border-border-muted mt-3">
+          <div className="flex items-center gap-3">
+            <Palette className="h-5 w-5 text-text-muted" />
+            <div>
+              <p className="font-semibold text-text-primary">Display Color</p>
+              <p className="text-sm text-text-muted mt-0.5">Tints your roster cards on the dashboard</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <input
+              type="color"
+              value={userColor}
+              onChange={e => setUserColor(e.target.value)}
+              className="w-9 h-9 rounded-lg border border-border-default cursor-pointer bg-transparent"
+            />
+            <NeuButton variant="ghost" size="sm" disabled={colorSaving} onClick={() => {
+              setColorSaving(true)
+              fetch('/api/settings/preferences', {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ color: userColor })
+              }).then(res => {
+                if (!res.ok) throw new Error('Failed to save')
+                toast.success('Color saved!')
+                onUpdate()
+              }).catch(err => toast.error(err.message))
+                .finally(() => setColorSaving(false))
+            }}>
+              {colorSaving ? 'Saving...' : 'Save'}
+            </NeuButton>
+          </div>
         </div>
       </NeuCard>
 

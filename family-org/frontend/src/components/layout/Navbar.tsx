@@ -30,7 +30,7 @@ export function Navbar({ user, activeTab, onTabChange }: NavbarProps) {
                 <Zap className="h-5 w-5" />
               </div>
               <span className="font-extrabold text-lg tracking-tight text-text-primary">
-                FamilyOrg
+                Scanlon Plan
               </span>
             </div>
 

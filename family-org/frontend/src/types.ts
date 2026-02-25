@@ -69,6 +69,7 @@ export interface RosterAssignment {
   id: number
   user_id: number
   user_name: string
+  color?: string
 }
 
 export interface Roster {
@@ -83,6 +84,7 @@ export interface FamilyMember {
   id: number
   name: string
   email: string
+  color?: string
 }
 
 export interface MyChore {
@@ -107,4 +109,11 @@ export interface MyChoresResponse {
   unassigned: MyChore[]
   bonus_unlocked: boolean
   bonus_chores: MyChore[]
+}
+
+export interface FamilyChildOverview {
+  user_id: number
+  user_name: string
+  color?: string | null
+  rosters: MyRoster[]
 }

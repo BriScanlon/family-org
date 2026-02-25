@@ -54,17 +54,13 @@ export function Dashboard({
 
       <SummaryStrip chores={chores} events={events} user={user} />
 
-      <div className="grid grid-cols-1 lg:grid-cols-6 gap-4">
-        <div className="lg:col-span-4">
-          <ChoreChecklist onComplete={onCompleteChore} />
-        </div>
-        <div className="lg:col-span-2 space-y-4">
-          <UpcomingEvents events={events} onViewAll={onViewCalendar} />
-          {leagueTable.length > 0 && (
-            <LeagueTable entries={leagueTable} currentUserId={user.id} />
-          )}
-        </div>
-      </div>
+      <UpcomingEvents events={events} onViewAll={onViewCalendar} />
+
+      <ChoreChecklist onComplete={onCompleteChore} userColor={(user.preferences?.color as string) || undefined} isParent={user.role === 'parent'} />
+
+      {leagueTable.length > 0 && (
+        <LeagueTable entries={leagueTable} currentUserId={user.id} />
+      )}
     </div>
   )
 }

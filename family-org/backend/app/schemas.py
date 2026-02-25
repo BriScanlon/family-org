@@ -24,6 +24,7 @@ class User(UserBase):
 class PreferencesUpdate(BaseModel):
     theme: Optional[str] = None
     show_league_table: Optional[bool] = None
+    color: Optional[str] = None
 
     model_config = {
         "extra": "forbid"
@@ -100,6 +101,7 @@ class RosterAssignmentOut(BaseModel):
     id: int
     user_id: int
     user_name: str
+    color: Optional[str] = None
 
 class RosterOut(BaseModel):
     id: int
