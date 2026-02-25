@@ -58,7 +58,7 @@ export function AddChoreModal({ open, onClose, onSubmit, chore }: AddChoreModalP
         />
 
         <div className="grid grid-cols-2 gap-4">
-          <label className="flex items-center gap-3 p-3 rounded-xl neu-raised-sm cursor-pointer">
+          <label className="flex items-center gap-3 p-3 rounded-xl bg-surface-raised border border-border-default cursor-pointer">
             <input
               type="checkbox"
               checked={isBonus}
@@ -76,7 +76,7 @@ export function AddChoreModal({ open, onClose, onSubmit, chore }: AddChoreModalP
               <select
                 value={frequency}
                 onChange={e => setFrequency(e.target.value)}
-                className="w-full px-4 py-2.5 rounded-xl bg-neu-base neu-inset-sm text-text-primary outline-none"
+                className="w-full px-4 py-2.5 rounded-xl bg-surface-base border border-border-default text-text-primary outline-none focus:border-accent-primary"
               >
                 <option value="daily">Daily</option>
                 <option value="weekly">Weekly</option>
