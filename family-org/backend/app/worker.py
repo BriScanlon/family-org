@@ -7,7 +7,7 @@ from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
 from sqlalchemy.orm import Session
 from .database import SessionLocal
-from .models import User, Chore, Event, Alert
+from .models import User, Chore, Event, Alert, ChoreCompletion
 from .config import settings
 from .services.ai_agent import FamilyAIAgent
 
@@ -49,6 +49,24 @@ async def reset_chores_task():
             if reset_count > 0:
                 db.commit()
                 print(f"[Worker] Reset {reset_count} recurring chores.")
+
+            # Reset roster chore completions
+            daily_deleted = db.query(ChoreCompletion).filter(
+                ChoreCompletion.completed_at < today_start
+            ).join(Chore).filter(Chore.frequency == "daily").delete(synchronize_session=False)
+
+            weekly_deleted = db.query(ChoreCompletion).filter(
+                ChoreCompletion.completed_at < last_saturday
+            ).join(Chore).filter(Chore.frequency == "weekly").delete(synchronize_session=False)
+
+            monthly_deleted = db.query(ChoreCompletion).filter(
+                ChoreCompletion.completed_at < first_of_month
+            ).join(Chore).filter(Chore.frequency == "monthly").delete(synchronize_session=False)
+
+            completion_reset = daily_deleted + weekly_deleted + monthly_deleted
+            if completion_reset > 0:
+                db.commit()
+                print(f"[Worker] Deleted {completion_reset} stale chore completion records.")
 
             # AI Schedule Analysis
             agent = FamilyAIAgent(db)
