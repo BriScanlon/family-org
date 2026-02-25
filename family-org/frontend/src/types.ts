@@ -57,3 +57,54 @@ export interface GoogleCalendar {
   summary: string
   primary?: boolean
 }
+
+export interface RosterChore {
+  id: number
+  title: string
+  points: number
+  frequency: string
+}
+
+export interface RosterAssignment {
+  id: number
+  user_id: number
+  user_name: string
+}
+
+export interface Roster {
+  id: number
+  name: string
+  created_by: number
+  chores: RosterChore[]
+  assignments: RosterAssignment[]
+}
+
+export interface FamilyMember {
+  id: number
+  name: string
+  email: string
+}
+
+export interface MyChore {
+  id: number
+  title: string
+  points: number
+  frequency: string
+  is_completed: boolean
+  roster_name?: string
+}
+
+export interface MyRoster {
+  roster_id: number
+  roster_name: string
+  chores: MyChore[]
+  completed: number
+  total: number
+}
+
+export interface MyChoresResponse {
+  rosters: MyRoster[]
+  unassigned: MyChore[]
+  bonus_unlocked: boolean
+  bonus_chores: MyChore[]
+}
