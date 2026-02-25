@@ -63,7 +63,7 @@ export function AddChoreModal({ open, onClose, onSubmit, chore }: AddChoreModalP
               type="checkbox"
               checked={isBonus}
               onChange={e => setIsBonus(e.target.checked)}
-              className="h-4 w-4 rounded accent-accent-teal"
+              className="h-4 w-4 rounded accent-accent-primary"
             />
             <span className="text-sm font-medium text-text-primary">Bonus Chore?</span>
           </label>

@@ -27,13 +27,6 @@
   --color-accent-red: #f87171;
   --color-accent-blue: #60a5fa;
 
-  /* ── Legacy aliases (keeps existing component refs working during migration) ── */
-  --color-neu-base: var(--color-surface-base);
-  --color-neu-dark: #151518;
-  --color-neu-light: #27272c;
-  --color-accent-teal: var(--color-accent-primary);
-  --color-accent-teal-dim: var(--color-accent-primary-dim);
-
   /* ── Font ── */
   --font-sans: "Inter", "system-ui", "sans-serif";
 }
@@ -47,14 +40,6 @@
     background-color: color-mix(in srgb, var(--color-accent-primary) 30%, transparent);
   }
 }
-
-/* ── Legacy neumorphic utilities (no-ops during migration, remove after) ── */
-@utility neu-raised { box-shadow: none; }
-@utility neu-raised-sm { box-shadow: none; }
-@utility neu-raised-lg { box-shadow: none; }
-@utility neu-inset { box-shadow: none; }
-@utility neu-inset-sm { box-shadow: none; }
-@utility neu-flat { box-shadow: none; }
 
 /* ── Editorial utilities ── */
 @utility card-shadow {
@@ -91,11 +76,6 @@
   --color-accent-red: #dc2626;
   --color-accent-blue: #2563eb;
 
-  --color-neu-base: var(--color-surface-base);
-  --color-neu-dark: #b8b8bc;
-  --color-neu-light: #ffffff;
-  --color-accent-teal: var(--color-accent-primary);
-  --color-accent-teal-dim: var(--color-accent-primary-dim);
 }
 
 .light .card-shadow { box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.06); }
