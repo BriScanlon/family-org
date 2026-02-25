@@ -1,9 +1,10 @@
+from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, status, Request
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from typing import List
 from ..database import get_db
-from ..models import User, Chore
+from ..models import User, Chore, ChoreCompletion, RosterAssignment
 from ..schemas import ChoreCreate, Chore as ChoreSchema
 
 from .auth import get_me
@@ -48,49 +49,87 @@ async def complete_chore(chore_id: int, user_id: int, db: Session = Depends(get_
     chore = db.query(Chore).filter(Chore.id == chore_id).first()
     if not chore:
         raise HTTPException(status_code=404, detail="Chore not found")
-    
+
+    today_start = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+
+    # For roster chores, use ChoreCompletion
+    if chore.roster_id is not None:
+        existing = db.query(ChoreCompletion).filter(
+            ChoreCompletion.chore_id == chore_id,
+            ChoreCompletion.user_id == user_id,
+            ChoreCompletion.completed_at >= today_start
+        ).first()
+        if existing:
+            raise HTTPException(status_code=400, detail="Chore already completed today")
+
+        completion = ChoreCompletion(chore_id=chore_id, user_id=user_id)
+        db.add(completion)
+
+        user = db.query(User).filter(User.id == user_id).first()
+        if user:
+            user.points += chore.points
+        db.commit()
+
+        await manager.broadcast({
+            "type": "CHORE_COMPLETED",
+            "chore_id": chore_id,
+            "user_id": user_id,
+            "is_bonus": False,
+            "reward": chore.points
+        })
+        return {"status": "success", "points_added": chore.points, "money_added": 0}
+
+    # Legacy path for non-roster chores (bonus chores, Go4Schools, AI, etc.)
     if chore.is_completed:
         raise HTTPException(status_code=400, detail="Chore already completed")
 
-    # Check if bonus chore can be unlocked
     if chore.is_bonus:
-        # Check if all standard chores (not bonus) assigned to this user are completed
+        # Check per-child: all roster chores completed
+        assignments = db.query(RosterAssignment).filter(RosterAssignment.user_id == user_id).all()
+        for a in assignments:
+            roster_chores = db.query(Chore).filter(Chore.roster_id == a.roster_id).all()
+            for rc in roster_chores:
+                comp = db.query(ChoreCompletion).filter(
+                    ChoreCompletion.chore_id == rc.id,
+                    ChoreCompletion.user_id == user_id,
+                    ChoreCompletion.completed_at >= today_start
+                ).first()
+                if not comp:
+                    raise HTTPException(status_code=400, detail="Complete all your roster chores first!")
+
+        # Also check non-roster standard chores
         incomplete_standard = db.query(Chore).filter(
-            Chore.assignee_id == user_id,
-            Chore.is_bonus == False, 
+            Chore.roster_id.is_(None),
+            Chore.is_bonus == False,
             Chore.is_completed == False
         ).first()
-        
         if incomplete_standard:
             raise HTTPException(status_code=400, detail="Complete all your standard chores first!")
 
     chore.is_completed = True
     chore.last_completed_at = func.now()
     chore.assignee_id = user_id
-    
-    # Update user stats
+
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
-        # If user doesn't exist (e.g. in tests), we can't add points/money but we complete the chore
         db.commit()
         return {"status": "success", "points_added": 0, "money_added": 0}
-    
+
     if chore.is_bonus:
         user.balance += chore.reward_money
     else:
         user.points += chore.points
-    
+
     db.commit()
-    
-    # Notify all clients
+
     await manager.broadcast({
-        "type": "CHORE_COMPLETED", 
-        "chore_id": chore_id, 
+        "type": "CHORE_COMPLETED",
+        "chore_id": chore_id,
         "user_id": user_id,
         "is_bonus": chore.is_bonus,
         "reward": chore.reward_money if chore.is_bonus else chore.points
     })
-    
+
     return {
         "status": "success",
         "points_added": chore.points if not chore.is_bonus else 0,
