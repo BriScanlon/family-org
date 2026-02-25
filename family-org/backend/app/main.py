@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from typing import Optional
 import time
-from .routers import auth, chores, rewards, dashboard, settings
+from .routers import auth, chores, rewards, dashboard, settings, rosters
 from .database import init_db
 
 app = FastAPI()
@@ -35,6 +35,7 @@ app.include_router(chores.router)
 app.include_router(rewards.router)
 app.include_router(dashboard.router)
 app.include_router(settings.router)
+app.include_router(rosters.router)
 
 @app.get("/")
 def read_root():
