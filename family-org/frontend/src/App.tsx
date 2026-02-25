@@ -229,6 +229,7 @@ function App() {
                 onDelete={handleDeleteChore}
                 onUncomplete={handleUncompleteChore}
                 isParent={user.role === 'parent'}
+                onUpdate={fetchData}
               />
             )}
             {activeTab === 'rewards' && (
