@@ -47,8 +47,48 @@ class Chore(Base):
     due_date = Column(DateTime, nullable=True)
     personal = Column(Boolean, default=False)  # Only visible to assignee
     assignee_id = Column(Integer, ForeignKey("users.id"))
+    roster_id = Column(Integer, ForeignKey("rosters.id", ondelete="SET NULL"), nullable=True)
 
     assignee = relationship("User", back_populates="chores")
+    roster = relationship("Roster", back_populates="chores")
+    completions = relationship("ChoreCompletion", back_populates="chore", cascade="all, delete-orphan")
+
+
+class Roster(Base):
+    __tablename__ = "rosters"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, nullable=False)
+    created_by = Column(Integer, ForeignKey("users.id"), nullable=False)
+    created_at = Column(DateTime, server_default=func.now())
+
+    creator = relationship("User", foreign_keys=[created_by])
+    assignments = relationship("RosterAssignment", back_populates="roster", cascade="all, delete-orphan")
+    chores = relationship("Chore", back_populates="roster")
+
+
+class RosterAssignment(Base):
+    __tablename__ = "roster_assignments"
+
+    id = Column(Integer, primary_key=True, index=True)
+    roster_id = Column(Integer, ForeignKey("rosters.id", ondelete="CASCADE"), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+
+    roster = relationship("Roster", back_populates="assignments")
+    user = relationship("User")
+
+
+class ChoreCompletion(Base):
+    __tablename__ = "chore_completions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    chore_id = Column(Integer, ForeignKey("chores.id", ondelete="CASCADE"), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    completed_at = Column(DateTime, server_default=func.now())
+
+    chore = relationship("Chore", back_populates="completions")
+    user = relationship("User")
+
 
 class Reward(Base):
     __tablename__ = "rewards"
