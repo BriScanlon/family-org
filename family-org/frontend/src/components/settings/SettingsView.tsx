@@ -117,7 +117,7 @@ export function SettingsView({ user, onUpdate }: SettingsViewProps) {
   if (loading) {
     return (
       <div className="p-12 text-center text-text-muted">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-accent-teal mx-auto mb-3"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-accent-primary mx-auto mb-3"></div>
         Loading settings...
       </div>
     )
@@ -127,11 +127,11 @@ export function SettingsView({ user, onUpdate }: SettingsViewProps) {
     <div className="max-w-2xl mx-auto space-y-8">
       <NeuCard>
         <div className="flex items-center gap-3 mb-6">
-          <ShieldCheck className="h-6 w-6 text-accent-teal" />
+          <ShieldCheck className="h-6 w-6 text-accent-primary" />
           <h2 className="text-2xl font-bold text-text-primary">Account Settings</h2>
         </div>
 
-        <div className="flex items-center justify-between p-4 rounded-xl neu-inset-sm">
+        <div className="flex items-center justify-between p-4 rounded-xl bg-surface-raised border border-border-muted">
           <div>
             <p className="font-semibold text-text-primary">Current Role</p>
             <p className="text-sm text-text-muted uppercase tracking-widest font-bold mt-1">{user.role}</p>
@@ -146,11 +146,11 @@ export function SettingsView({ user, onUpdate }: SettingsViewProps) {
 
       <NeuCard>
         <div className="flex items-center gap-3 mb-6">
-          {theme === 'dark' ? <Moon className="h-6 w-6 text-accent-teal" /> : <Sun className="h-6 w-6 text-accent-teal" />}
+          {theme === 'dark' ? <Moon className="h-6 w-6 text-accent-primary" /> : <Sun className="h-6 w-6 text-accent-primary" />}
           <h2 className="text-2xl font-bold text-text-primary">Appearance</h2>
         </div>
 
-        <div className="flex items-center justify-between p-4 rounded-xl neu-inset-sm">
+        <div className="flex items-center justify-between p-4 rounded-xl bg-surface-raised border border-border-muted">
           <div>
             <p className="font-semibold text-text-primary">Theme</p>
             <p className="text-sm text-text-muted mt-1">
@@ -168,13 +168,13 @@ export function SettingsView({ user, onUpdate }: SettingsViewProps) {
 
       <NeuCard>
         <div className="flex items-center gap-3 mb-6">
-          <GraduationCap className="h-6 w-6 text-accent-teal" />
+          <GraduationCap className="h-6 w-6 text-accent-primary" />
           <h2 className="text-2xl font-bold text-text-primary">Go4Schools</h2>
         </div>
 
         {g4sStatus?.connected ? (
           <div className="space-y-4">
-            <div className="p-4 rounded-xl neu-inset-sm">
+            <div className="p-4 rounded-xl bg-surface-raised border border-border-muted">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="font-semibold text-text-primary">{g4sStatus.email}</p>
@@ -209,14 +209,14 @@ export function SettingsView({ user, onUpdate }: SettingsViewProps) {
                 placeholder="Go4Schools email"
                 value={g4sEmail}
                 onChange={e => setG4sEmail(e.target.value)}
-                className="w-full p-3 rounded-xl neu-inset-sm bg-transparent text-text-primary placeholder:text-text-muted/50 outline-none"
+                className="w-full p-3 rounded-xl bg-surface-base border border-border-default text-text-primary placeholder:text-text-muted focus:border-accent-primary outline-none"
               />
               <input
                 type="password"
                 placeholder="Password"
                 value={g4sPassword}
                 onChange={e => setG4sPassword(e.target.value)}
-                className="w-full p-3 rounded-xl neu-inset-sm bg-transparent text-text-primary placeholder:text-text-muted/50 outline-none"
+                className="w-full p-3 rounded-xl bg-surface-base border border-border-default text-text-primary placeholder:text-text-muted focus:border-accent-primary outline-none"
               />
             </div>
             <NeuButton variant="teal" onClick={handleG4sConnect} disabled={g4sSaving || !g4sEmail || !g4sPassword}>
@@ -229,11 +229,11 @@ export function SettingsView({ user, onUpdate }: SettingsViewProps) {
       {user.role === 'parent' && (
         <NeuCard>
           <div className="flex items-center gap-3 mb-6">
-            <Trophy className="h-6 w-6 text-accent-teal" />
+            <Trophy className="h-6 w-6 text-accent-primary" />
             <h2 className="text-2xl font-bold text-text-primary">Family Dashboard</h2>
           </div>
 
-          <div className="flex items-center justify-between p-4 rounded-xl neu-inset-sm">
+          <div className="flex items-center justify-between p-4 rounded-xl bg-surface-raised border border-border-muted">
             <div>
               <p className="font-semibold text-text-primary">Family Standings</p>
               <p className="text-sm text-text-muted mt-1">
@@ -262,7 +262,7 @@ export function SettingsView({ user, onUpdate }: SettingsViewProps) {
         <NeuCard>
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-3">
-              <CalendarIcon className="h-6 w-6 text-accent-teal" />
+              <CalendarIcon className="h-6 w-6 text-accent-primary" />
               <h2 className="text-2xl font-bold text-text-primary">Sync Calendars</h2>
             </div>
             <NeuButton variant="teal" onClick={handleSave} disabled={saving}>
@@ -285,8 +285,8 @@ export function SettingsView({ user, onUpdate }: SettingsViewProps) {
                 className={clsx(
                   'flex items-center justify-between p-4 rounded-xl transition-all cursor-pointer',
                   selectedIds.includes(cal.id)
-                    ? 'neu-raised-sm'
-                    : 'neu-flat hover:bg-neu-light/20'
+                    ? 'bg-surface-card border border-border-default card-shadow'
+                    : 'hover:bg-surface-raised'
                 )}
               >
                 <div className="flex items-center gap-3">
@@ -298,14 +298,14 @@ export function SettingsView({ user, onUpdate }: SettingsViewProps) {
                   />
                   <div className={clsx(
                     'h-5 w-5 rounded-md border-2 flex items-center justify-center transition-colors',
-                    selectedIds.includes(cal.id) ? 'bg-accent-teal border-accent-teal text-neu-base' : 'border-text-muted'
+                    selectedIds.includes(cal.id) ? 'bg-accent-primary border-accent-primary text-text-inverse' : 'border-text-muted'
                   )}>
                     {selectedIds.includes(cal.id) && <Check className="h-3 w-3" />}
                   </div>
                   <span className="font-semibold text-text-primary">{cal.summary}</span>
                 </div>
                 {cal.primary && (
-                  <span className="text-[10px] font-bold text-accent-teal bg-accent-teal/15 px-2 py-0.5 rounded-full uppercase">
+                  <span className="text-[10px] font-bold text-accent-primary bg-accent-primary/10 px-2 py-0.5 rounded-full uppercase">
                     Primary
                   </span>
                 )}
