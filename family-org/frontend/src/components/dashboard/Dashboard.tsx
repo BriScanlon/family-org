@@ -56,7 +56,7 @@ export function Dashboard({
 
       <div className="grid grid-cols-1 lg:grid-cols-6 gap-4">
         <div className="lg:col-span-4">
-          <ChoreChecklist chores={chores} onComplete={onCompleteChore} />
+          <ChoreChecklist onComplete={onCompleteChore} />
         </div>
         <div className="lg:col-span-2 space-y-4">
           <UpcomingEvents events={events} onViewAll={onViewCalendar} />
