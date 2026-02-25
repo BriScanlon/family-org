@@ -48,6 +48,7 @@ class Chore(ChoreBase):
     id: int
     is_completed: bool
     assignee_id: Optional[int] = None
+    roster_id: Optional[int] = None
     source: str = "manual"
     source_id: Optional[str] = None
     due_date: Optional[datetime] = None
@@ -73,3 +74,67 @@ class Reward(RewardBase):
     model_config = {
         "from_attributes": True
     }
+
+class RosterCreate(BaseModel):
+    name: str
+
+class RosterChoreCreate(BaseModel):
+    title: str
+    description: Optional[str] = None
+    points: int = 0
+    frequency: str = "daily"
+
+class RosterAssign(BaseModel):
+    user_ids: list[int]
+
+class RosterChoreOut(BaseModel):
+    id: int
+    title: str
+    description: Optional[str] = None
+    points: int
+    frequency: str
+
+    model_config = {"from_attributes": True}
+
+class RosterAssignmentOut(BaseModel):
+    id: int
+    user_id: int
+    user_name: str
+
+class RosterOut(BaseModel):
+    id: int
+    name: str
+    created_by: int
+    chores: list[RosterChoreOut] = []
+    assignments: list[RosterAssignmentOut] = []
+
+    model_config = {"from_attributes": True}
+
+class ChoreCompletionOut(BaseModel):
+    id: int
+    chore_id: int
+    user_id: int
+    completed_at: datetime
+
+    model_config = {"from_attributes": True}
+
+class MyChoreOut(BaseModel):
+    id: int
+    title: str
+    points: int
+    frequency: str
+    is_completed: bool
+    roster_name: Optional[str] = None
+
+class MyRosterOut(BaseModel):
+    roster_id: int
+    roster_name: str
+    chores: list[MyChoreOut]
+    completed: int
+    total: int
+
+class MyChoresResponse(BaseModel):
+    rosters: list[MyRosterOut]
+    unassigned: list[MyChoreOut]
+    bonus_unlocked: bool
+    bonus_chores: list[MyChoreOut]
