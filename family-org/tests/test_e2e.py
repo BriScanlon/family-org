@@ -54,6 +54,13 @@ class TestFamilyOrgEndToEnd(unittest.TestCase):
             self.assertIn("standard_completed", data[0])
             self.assertIn("bonus_completed", data[0])
 
+    def test_kiosk_dashboard_returns_html(self):
+        response = requests.get(f"{self.BACKEND_URL}/dashboard/kiosk")
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("text/html", response.headers["content-type"])
+        self.assertIn("The Scanlon Plan", response.text)
+        self.assertIn('<meta http-equiv="refresh" content="60">', response.text)
+
     def test_04_user_preferences(self):
         """Test that user preferences field exists and defaults to empty."""
         user = requests.post(f"{self.BACKEND_URL}/auth/test-user", json={
