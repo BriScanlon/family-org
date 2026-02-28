@@ -154,6 +154,26 @@ def kiosk_dashboard(db: Session = Depends(get_db)):
                 child_total += 1
                 roster_chores.append({"title": c.title, "done": is_done})
             child_rosters.append({"name": roster.name, "chores": roster_chores})
+        # Non-roster chores assigned directly to this child
+        direct_chores = db.query(Chore).filter(
+            Chore.assignee_id == child.id,
+            Chore.roster_id == None,
+            Chore.is_completed == False,
+        ).all()
+        direct_chore_items = []
+        for c in direct_chores:
+            comp = db.query(ChoreCompletion).filter(
+                ChoreCompletion.chore_id == c.id,
+                ChoreCompletion.user_id == child.id,
+                ChoreCompletion.completed_at >= today_start
+            ).first()
+            is_done = comp is not None
+            if is_done:
+                child_done += 1
+            child_total += 1
+            direct_chore_items.append({"title": c.title, "done": is_done})
+        if direct_chore_items:
+            child_rosters.append({"name": "Tasks", "chores": direct_chore_items})
         total_chores += child_total
         total_done += child_done
         color = (child.preferences or {}).get("color", "#6366f1")
@@ -164,6 +184,21 @@ def kiosk_dashboard(db: Session = Depends(get_db)):
             "total": child_total,
             "rosters": child_rosters,
         })
+
+    # --- Unassigned family tasks (non-roster, no assignee) ---
+    family_tasks = db.query(Chore).filter(
+        Chore.assignee_id == None,
+        Chore.roster_id == None,
+        Chore.is_completed == False,
+    ).all()
+    family_task_items = []
+    for c in family_tasks:
+        comp = db.query(ChoreCompletion).filter(
+            ChoreCompletion.chore_id == c.id,
+            ChoreCompletion.completed_at >= today_start
+        ).first()
+        is_done = comp is not None
+        family_task_items.append({"title": c.title, "done": is_done})
 
     # --- League table ---
     league = _build_league_table(db)
@@ -222,6 +257,31 @@ def kiosk_dashboard(db: Session = Depends(get_db)):
             f'<div class="progress-fill" style="background:{safe_color};width:{pct}%;"></div>'
             f'</div>'
             f'{rosters_html}'
+            f'</div>'
+            f'</div>'
+        )
+
+    # Family tasks card
+    family_tasks_html = ""
+    if family_task_items:
+        task_rows = ""
+        for t in family_task_items:
+            icon = "&#10003;" if t["done"] else "&#9675;"
+            done_class = " chore-done" if t["done"] else ""
+            task_rows += (
+                f'<div class="chore-row{done_class}">'
+                f'<span class="chore-icon{" chore-icon-done" if t["done"] else ""}">{icon}</span>'
+                f'<span class="chore-title">{_esc(t["title"])}</span>'
+                f'</div>'
+            )
+        family_tasks_html = (
+            f'<div class="card child-card">'
+            f'<div class="child-header" style="border-top-color:#f59e0b;">'
+            f'<span class="child-name">Family Tasks</span>'
+            f'<span class="child-count">{sum(1 for t in family_task_items if t["done"])}/{len(family_task_items)}</span>'
+            f'</div>'
+            f'<div class="child-body">'
+            f'{task_rows}'
             f'</div>'
             f'</div>'
         )
@@ -344,6 +404,7 @@ h1,h2,h3{{color:#f8fafc;}}
 <div class="main-grid">
  <div class="children-grid">
   {children_html}
+  {family_tasks_html}
  </div>
 
  <div>

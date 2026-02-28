@@ -71,17 +71,25 @@ async def callback(code: str, db: Session = Depends(get_db)):
     email = id_info.get("email")
     name = id_info.get("name")
 
-    # Check if user exists, else create
+    # Check if user exists by google_id, then by email (for pre-created accounts)
     user = db.query(User).filter(User.google_id == google_id).first()
     if not user:
-        user = User(
-            google_id=google_id,
-            email=email,
-            name=name,
-            google_access_token=credentials.token,
-            google_refresh_token=credentials.refresh_token
-        )
-        db.add(user)
+        user = db.query(User).filter(User.email == email).first()
+        if user:
+            # Link pre-created account to their Google identity
+            user.google_id = google_id
+            user.google_access_token = credentials.token
+            if credentials.refresh_token:
+                user.google_refresh_token = credentials.refresh_token
+        else:
+            user = User(
+                google_id=google_id,
+                email=email,
+                name=name,
+                google_access_token=credentials.token,
+                google_refresh_token=credentials.refresh_token
+            )
+            db.add(user)
     else:
         user.google_access_token = credentials.token
         if credentials.refresh_token:
@@ -118,6 +126,8 @@ async def get_me(request: Request, db: Session = Depends(get_db)):
         raise HTTPException(status_code=401, detail="Invalid token")
     
     user = db.query(User).filter(User.email == payload.get("sub")).first()
+    if not user:
+        raise HTTPException(status_code=401, detail="User not found")
     return user
 
 @router.post("/test-user")
