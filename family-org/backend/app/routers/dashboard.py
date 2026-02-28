@@ -341,7 +341,28 @@ def kiosk_dashboard(db: Session = Depends(get_db)):
 <title>The Scanlon Plan</title>
 <style>
 *{{margin:0;padding:0;box-sizing:border-box;}}
-body{{background:#0f172a;color:#e2e8f0;font-family:system-ui,-apple-system,sans-serif;min-height:100vh;padding:24px;}}
+body{{background:#0f172a;color:#e2e8f0;font-family:system-ui,-apple-system,sans-serif;min-height:100vh;padding:24px;overflow:hidden;animation:pixel-shift 120s ease-in-out infinite;will-change:transform;}}
+@keyframes pixel-shift{{
+  0%{{transform:translate(0,0);}}
+  25%{{transform:translate(2px,1px);}}
+  50%{{transform:translate(0,3px);}}
+  75%{{transform:translate(-2px,1px);}}
+  100%{{transform:translate(0,0);}}
+}}
+@keyframes breathe{{
+  0%,100%{{opacity:1;}}
+  50%{{opacity:0.92;}}
+}}
+.child-card{{will-change:opacity;}}
+.child-card:nth-child(1){{animation:breathe 45s ease-in-out infinite;}}
+.child-card:nth-child(2){{animation:breathe 55s ease-in-out 15s infinite;}}
+.child-card:nth-child(3){{animation:breathe 50s ease-in-out 30s infinite;}}
+.child-card:nth-child(4){{animation:breathe 60s ease-in-out 10s infinite;}}
+.sidebar-card:first-child{{animation:breathe 65s ease-in-out 5s infinite;will-change:opacity;}}
+.sidebar-card:last-child{{animation:breathe 70s ease-in-out 25s infinite;will-change:opacity;}}
+.summary-card:nth-child(1){{animation:breathe 50s ease-in-out 8s infinite;will-change:opacity;}}
+.summary-card:nth-child(2){{animation:breathe 55s ease-in-out 20s infinite;will-change:opacity;}}
+.summary-card:nth-child(3){{animation:breathe 60s ease-in-out 35s infinite;will-change:opacity;}}
 h1,h2,h3{{color:#f8fafc;}}
 .card{{background:#1e293b;border-radius:12px;padding:16px;}}
 .summary-cards{{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:24px;}}
