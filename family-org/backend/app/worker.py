@@ -125,24 +125,25 @@ async def process_sync(message_body: dict):
     if msg_type == "calendar_sync":
         try:
             service = build('calendar', 'v3', credentials=creds)
-            
+
             # Sync from all selected calendars, or default to primary
             calendar_ids = user.synced_calendars if user.synced_calendars else ['primary']
             print(f"[Worker] Syncing {len(calendar_ids)} calendars: {calendar_ids}")
-            
+
             total_synced = 0
+            synced_google_ids = set()
             for cal_id in calendar_ids:
                 try:
                     events_result = service.events().list(
-                        calendarId=cal_id, 
-                        maxResults=50, 
-                        singleEvents=True, 
+                        calendarId=cal_id,
+                        maxResults=50,
+                        singleEvents=True,
                         orderBy='startTime',
                         timeMin=datetime.now(timezone.utc).isoformat()
                     ).execute()
                     events = events_result.get('items', [])
                     print(f"[Worker] Found {len(events)} events in calendar {cal_id}")
-                    
+
                     for g_event in events:
                         # Visibility: 'private' or 'confidential' should be skipped
                         visibility = g_event.get('visibility', 'default')
@@ -151,10 +152,11 @@ async def process_sync(message_body: dict):
 
                         start = g_event['start'].get('dateTime', g_event['start'].get('date'))
                         end = g_event['end'].get('dateTime', g_event['end'].get('date'))
-                        
+
                         event_id = g_event['id']
+                        synced_google_ids.add(event_id)
                         db_event = db.query(Event).filter(Event.google_event_id == event_id).first()
-                        
+
                         if not db_event:
                             db_event = Event(
                                 google_event_id=event_id,
@@ -170,14 +172,27 @@ async def process_sync(message_body: dict):
                             db_event.start_time = start
                             db_event.end_time = end
                             db_event.location = g_event.get('location')
-                    
+
                     total_synced += len(events)
                 except Exception as e:
                     print(f"[Worker] Error syncing calendar {cal_id}: {e}")
-            
+
+            # Remove events that no longer exist in Google Calendar (deleted or past)
+            # Only prune if we successfully fetched at least some events
+            stale_count = 0
+            if synced_google_ids:
+                stale_events = db.query(Event).filter(
+                    Event.user_id == user_id,
+                    Event.google_event_id.isnot(None),
+                    Event.google_event_id.notin_(synced_google_ids),
+                ).all()
+                stale_count = len(stale_events)
+                for ev in stale_events:
+                    db.delete(ev)
+
             db.commit()
-            print(f"[Worker] Successfully synced {total_synced} total events for user {user.email}")
-            
+            print(f"[Worker] Synced {total_synced} events, removed {stale_count} stale events for {user.email}")
+
             # Broadcast update
             from .services.rabbitmq import send_sync_message
             await send_sync_message("dashboard_refresh", {"user_id": user_id}, routing_key="broadcast_queue")
@@ -219,6 +234,24 @@ async def process_sync(message_body: dict):
 
     db.close()
 
+async def calendar_periodic_sync():
+    """Periodic task to sync Google Calendar for all users with synced calendars."""
+    while True:
+        await asyncio.sleep(900)  # Every 15 minutes
+        try:
+            db: Session = SessionLocal()
+            users = db.query(User).filter(
+                User.google_refresh_token.isnot(None),
+            ).all()
+            for user in users:
+                if user.synced_calendars:
+                    from .services.rabbitmq import send_sync_message
+                    await send_sync_message("calendar_sync", {"user_id": user.id})
+                    print(f"[Worker] Queued periodic calendar sync for {user.email}")
+            db.close()
+        except Exception as e:
+            print(f"[Worker] Error in calendar_periodic_sync: {e}")
+
 async def go4schools_daily_sync():
     """Daily task to sync Go4Schools homework for all connected users."""
     while True:
@@ -252,8 +285,9 @@ async def main():
     channel = await connection.channel()
     queue = await channel.declare_queue("sync_queue")
 
-    # Start recurring reset task
+    # Start recurring background tasks
     asyncio.create_task(reset_chores_task())
+    asyncio.create_task(calendar_periodic_sync())
     asyncio.create_task(go4schools_daily_sync())
 
     async with queue.iterator() as queue_iter:
