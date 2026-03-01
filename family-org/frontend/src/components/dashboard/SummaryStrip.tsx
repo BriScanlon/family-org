@@ -17,6 +17,8 @@ export function SummaryStrip({ chores, events, user }: SummaryStripProps) {
     return eventDate.toDateString() === today.toDateString()
   })
 
+  const showBudget = user.preferences?.show_budget !== false
+
   const stats = [
     {
       icon: CheckSquare,
@@ -32,17 +34,17 @@ export function SummaryStrip({ chores, events, user }: SummaryStripProps) {
       accent: 'text-accent-blue',
       bg: 'bg-accent-blue/10',
     },
-    {
+    ...(showBudget ? [{
       icon: Wallet,
       label: 'Balance',
       value: `£${user.balance.toFixed(2)}`,
       accent: 'text-accent-amber',
       bg: 'bg-accent-amber/10',
-    },
+    }] : []),
   ]
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+    <div className={`grid grid-cols-1 ${stats.length === 2 ? 'sm:grid-cols-2' : 'sm:grid-cols-3'} gap-4`}>
       {stats.map(({ icon: Icon, label, value, accent, bg }) => (
         <div
           key={label}

@@ -10,9 +10,10 @@ interface RewardsViewProps {
   userBalance: number
   onRedeem: (rewardId: number) => void
   onCreate: (reward: { title: string; cost: number }) => void
+  showBudget?: boolean
 }
 
-export function RewardsView({ rewards, userBalance, onRedeem, onCreate }: RewardsViewProps) {
+export function RewardsView({ rewards, userBalance, onRedeem, onCreate, showBudget = true }: RewardsViewProps) {
   const [showModal, setShowModal] = useState(false)
 
   return (
@@ -33,6 +34,7 @@ export function RewardsView({ rewards, userBalance, onRedeem, onCreate }: Reward
             reward={reward}
             userBalance={userBalance}
             onRedeem={onRedeem}
+            showBudget={showBudget}
           />
         ))}
       </div>

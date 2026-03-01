@@ -230,6 +230,7 @@ function App() {
                 onUncomplete={handleUncompleteChore}
                 isParent={user.role === 'parent'}
                 onUpdate={fetchData}
+                showBudget={user.preferences?.show_budget !== false}
               />
             )}
             {activeTab === 'rewards' && (
@@ -238,6 +239,7 @@ function App() {
                 userBalance={user.balance}
                 onRedeem={handleRedeemReward}
                 onCreate={handleCreateReward}
+                showBudget={user.preferences?.show_budget !== false}
               />
             )}
             {activeTab === 'settings' && <SettingsView user={user} onUpdate={fetchData} />}

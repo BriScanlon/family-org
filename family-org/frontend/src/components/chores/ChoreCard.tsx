@@ -11,9 +11,10 @@ interface ChoreCardProps {
   onDelete?: (choreId: number) => void
   onUncomplete?: (choreId: number) => void
   isParent?: boolean
+  showBudget?: boolean
 }
 
-export function ChoreCard({ chore, onComplete, standardChoresDone, onEdit, onDelete, onUncomplete, isParent }: ChoreCardProps) {
+export function ChoreCard({ chore, onComplete, standardChoresDone, onEdit, onDelete, onUncomplete, isParent, showBudget = true }: ChoreCardProps) {
   const isLocked = chore.is_bonus && !standardChoresDone
   const canComplete = !chore.is_completed && !isLocked
 
@@ -55,7 +56,11 @@ export function ChoreCard({ chore, onComplete, standardChoresDone, onEdit, onDel
               </div>
             )}
             {chore.is_bonus ? (
-              <span className="font-bold text-accent-amber">£{chore.reward_money.toFixed(2)}</span>
+              showBudget ? (
+                <span className="font-bold text-accent-amber">£{chore.reward_money.toFixed(2)}</span>
+              ) : (
+                <span className="font-bold text-accent-amber text-xs">Bonus</span>
+              )
             ) : (
               <span className="font-bold text-text-muted text-xs">Required</span>
             )}

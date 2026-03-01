@@ -17,9 +17,10 @@ interface ChoresViewProps {
   onUncomplete: (choreId: number) => void
   isParent: boolean
   onUpdate: () => void
+  showBudget?: boolean
 }
 
-export function ChoresView({ chores, onComplete, onCreate, onEdit, onDelete, onUncomplete, isParent, onUpdate }: ChoresViewProps) {
+export function ChoresView({ chores, onComplete, onCreate, onEdit, onDelete, onUncomplete, isParent, onUpdate, showBudget = true }: ChoresViewProps) {
   const [showModal, setShowModal] = useState(false)
   const [editingChore, setEditingChore] = useState<Chore | null>(null)
   const [subTab, setSubTab] = useState<'chores' | 'rosters'>('chores')
@@ -100,6 +101,7 @@ export function ChoresView({ chores, onComplete, onCreate, onEdit, onDelete, onU
                   onDelete={onDelete}
                   onUncomplete={onUncomplete}
                   isParent={isParent}
+                  showBudget={showBudget}
                 />
               ))}
             </div>
@@ -168,7 +170,11 @@ export function ChoresView({ chores, onComplete, onCreate, onEdit, onDelete, onU
                         </td>
                         <td className="px-4 py-3 text-right">
                           {chore.is_bonus ? (
-                            <span className="text-sm font-bold text-accent-amber">£{chore.reward_money.toFixed(2)}</span>
+                            showBudget ? (
+                              <span className="text-sm font-bold text-accent-amber">£{chore.reward_money.toFixed(2)}</span>
+                            ) : (
+                              <span className="text-xs font-bold text-accent-amber">Bonus</span>
+                            )
                           ) : (
                             <span className="text-xs font-bold text-text-muted">Required</span>
                           )}

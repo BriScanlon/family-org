@@ -7,9 +7,10 @@ interface RewardCardProps {
   reward: Reward
   userBalance: number
   onRedeem: (rewardId: number) => void
+  showBudget?: boolean
 }
 
-export function RewardCard({ reward, userBalance, onRedeem }: RewardCardProps) {
+export function RewardCard({ reward, userBalance, onRedeem, showBudget = true }: RewardCardProps) {
   const canRedeem = !reward.is_redeemed && userBalance >= reward.cost
 
   return (
@@ -33,7 +34,7 @@ export function RewardCard({ reward, userBalance, onRedeem }: RewardCardProps) {
       <div className="p-5">
         <h3 className="font-bold text-text-primary text-lg mb-3">{reward.title}</h3>
         <div className="flex items-center justify-between">
-          <span className="font-bold text-accent-amber text-lg">£{reward.cost.toFixed(2)}</span>
+          {showBudget && <span className="font-bold text-accent-amber text-lg">£{reward.cost.toFixed(2)}</span>}
           <NeuButton
             variant="amber"
             size="sm"

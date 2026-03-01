@@ -53,12 +53,14 @@ export function Navbar({ user, activeTab, onTabChange }: NavbarProps) {
           </div>
 
           <div className="flex items-center gap-3">
-            <div className="hidden md:flex items-center gap-2 bg-surface-base rounded-xl px-3 py-1.5 border border-border-muted">
-              <Wallet className="h-4 w-4 text-accent-amber" />
-              <span className="font-bold text-accent-amber text-sm">
-                £{user.balance.toFixed(2)}
-              </span>
-            </div>
+            {user.preferences?.show_budget !== false && (
+              <div className="hidden md:flex items-center gap-2 bg-surface-base rounded-xl px-3 py-1.5 border border-border-muted">
+                <Wallet className="h-4 w-4 text-accent-amber" />
+                <span className="font-bold text-accent-amber text-sm">
+                  £{user.balance.toFixed(2)}
+                </span>
+              </div>
+            )}
 
             <button
               onClick={toggleTheme}
