@@ -8,7 +8,7 @@ from typing import List
 import json
 from ..database import get_db
 from ..services.ai_agent import FamilyAIAgent
-from ..models import User, Event, Alert, Chore, Roster, RosterAssignment, ChoreCompletion
+from ..models import User, Event, Alert, Chore, Roster, RosterAssignment, ChoreCompletion, GarminActivity
 from .auth import get_me
 
 
@@ -116,6 +116,40 @@ def get_ai_analysis(user_id: int, db: Session = Depends(get_db)):
     agent = FamilyAIAgent(db)
     analysis = agent.analyze_user_schedule(user_id)
     return analysis
+
+
+@router.get("/activities")
+def get_activities(db: Session = Depends(get_db)):
+    """Get last 7 days of Garmin activities grouped by user."""
+    from datetime import timedelta
+    cutoff = datetime.now() - timedelta(days=7)
+    activities = db.query(GarminActivity).filter(
+        GarminActivity.start_time >= cutoff
+    ).order_by(GarminActivity.start_time.desc()).all()
+
+    grouped = {}
+    for act in activities:
+        uid = act.user_id
+        if uid not in grouped:
+            user = act.user
+            grouped[uid] = {
+                "user_id": uid,
+                "user_name": user.name if user else "Unknown",
+                "color": (user.preferences or {}).get("color", "#6366f1") if user else "#6366f1",
+                "activities": [],
+            }
+        grouped[uid]["activities"].append({
+            "id": act.id,
+            "activity_type": act.activity_type,
+            "name": act.name,
+            "start_time": act.start_time.isoformat() if act.start_time else None,
+            "duration_seconds": act.duration_seconds,
+            "distance_meters": act.distance_meters,
+            "calories": act.calories,
+            "average_hr": act.average_hr,
+        })
+
+    return list(grouped.values())
 
 
 @router.get("/kiosk", response_class=HTMLResponse)
