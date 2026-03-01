@@ -217,8 +217,15 @@ def kiosk_dashboard(db: Session = Depends(get_db)):
     # --- Alerts (non-dismissed, for all users) ---
     alerts = db.query(Alert).filter(Alert.is_dismissed == False).order_by(Alert.created_at.desc()).limit(3).all()
 
-    # --- Family balance ---
-    family_balance = sum(c.balance or 0.0 for c in children)
+    # --- Family balance (check if any parent has hidden budget) ---
+    show_budget = True
+    parents = db.query(User).filter(User.role == "parent").all()
+    for parent in parents:
+        prefs = parent.preferences or {}
+        if prefs.get("show_budget") is False:
+            show_budget = False
+            break
+    family_balance = sum(c.balance or 0.0 for c in children) if show_budget else 0
 
     # --- Build HTML ---
     # Children cards
@@ -379,7 +386,7 @@ body{{background:#0f172a;color:#e2e8f0;font-family:system-ui,-apple-system,sans-
 .summary-card:nth-child(3){{animation:breathe 60s ease-in-out 35s infinite;will-change:opacity;}}
 h1,h2,h3{{color:#f8fafc;}}
 .card{{background:#1e293b;border-radius:12px;padding:16px;}}
-.summary-cards{{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:24px;}}
+.summary-cards{{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:24px;}}
 .summary-card{{text-align:center;}}
 .summary-value{{font-size:32px;font-weight:700;color:#f8fafc;}}
 .summary-label{{font-size:13px;text-transform:uppercase;color:#94a3b8;}}
@@ -432,10 +439,10 @@ h1,h2,h3{{color:#f8fafc;}}
   <div class="summary-label">Events Today</div>
   <div class="summary-value">{events_today_count}</div>
  </div>
- <div class="card summary-card">
+{f''' <div class="card summary-card">
   <div class="summary-label">Family Balance</div>
   <div class="summary-value">&pound;{family_balance:.2f}</div>
- </div>
+ </div>''' if show_budget else ''}
 </div>
 
 <div class="main-grid">

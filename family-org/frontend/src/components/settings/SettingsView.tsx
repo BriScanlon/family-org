@@ -294,6 +294,29 @@ export function SettingsView({ user, onUpdate }: SettingsViewProps) {
               {user.preferences?.show_league_table !== false ? 'Hide' : 'Show'}
             </NeuButton>
           </div>
+
+          <div className="flex items-center justify-between p-4 rounded-xl bg-surface-raised border border-border-muted mt-3">
+            <div>
+              <p className="font-semibold text-text-primary">Budget View</p>
+              <p className="text-sm text-text-muted mt-1">
+                {user.preferences?.show_budget !== false ? 'Family balance is visible on the dashboard' : 'Family balance is hidden'}
+              </p>
+            </div>
+            <NeuButton variant="ghost" size="sm" onClick={() => {
+              const current = user.preferences?.show_budget !== false
+              fetch('/api/settings/preferences', {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ show_budget: !current })
+              }).then(res => {
+                if (!res.ok) throw new Error('Failed to update')
+                toast.success(current ? 'Budget hidden' : 'Budget visible')
+                onUpdate()
+              }).catch(err => toast.error(err.message))
+            }}>
+              {user.preferences?.show_budget !== false ? 'Hide' : 'Show'}
+            </NeuButton>
+          </div>
         </NeuCard>
       )}
 

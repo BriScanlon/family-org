@@ -24,6 +24,7 @@ class User(UserBase):
 class PreferencesUpdate(BaseModel):
     theme: Optional[str] = None
     show_league_table: Optional[bool] = None
+    show_budget: Optional[bool] = None
     color: Optional[str] = None
 
     model_config = {
