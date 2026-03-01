@@ -232,6 +232,27 @@ async def process_sync(message_body: dict):
         except Exception as e:
             print(f"[Worker] Go4Schools fatal error: {e}")
 
+    elif msg_type == "garmin_sync":
+        try:
+            from .services.garmin import sync_activities
+            result = await sync_activities(user, db)
+            prefs = dict(user.preferences or {})
+            if result["error"]:
+                prefs["garmin_error"] = result["error"]
+                print(f"[Worker] Garmin error for {user.email}: {result['error']}")
+            else:
+                prefs.pop("garmin_error", None)
+                print(f"[Worker] Synced {result['synced']} Garmin activities for {user.email}")
+            prefs["garmin_last_sync"] = datetime.now(timezone.utc).isoformat()
+            user.preferences = prefs
+            db.add(user)
+            db.commit()
+
+            from .services.rabbitmq import send_sync_message
+            await send_sync_message("dashboard_refresh", {"user_id": user_id}, routing_key="broadcast_queue")
+        except Exception as e:
+            print(f"[Worker] Garmin fatal error: {e}")
+
     db.close()
 
 async def calendar_periodic_sync():
@@ -270,6 +291,22 @@ async def go4schools_daily_sync():
         # Wait remaining ~23 hours
         await asyncio.sleep(82800)
 
+async def garmin_periodic_sync():
+    """Periodic task to sync Garmin activities for all connected users."""
+    await asyncio.sleep(1800)  # 30-minute offset from other tasks
+    while True:
+        try:
+            db: Session = SessionLocal()
+            users = db.query(User).filter(User.garmin_email.isnot(None)).all()
+            for user in users:
+                from .services.rabbitmq import send_sync_message
+                await send_sync_message("garmin_sync", {"user_id": user.id})
+                print(f"[Worker] Queued Garmin sync for {user.email}")
+            db.close()
+        except Exception as e:
+            print(f"[Worker] Error in garmin_periodic_sync: {e}")
+        await asyncio.sleep(43200)  # Every 12 hours
+
 async def main():
     for i in range(10):
         try:
@@ -289,6 +326,7 @@ async def main():
     asyncio.create_task(reset_chores_task())
     asyncio.create_task(calendar_periodic_sync())
     asyncio.create_task(go4schools_daily_sync())
+    asyncio.create_task(garmin_periodic_sync())
 
     async with queue.iterator() as queue_iter:
         async for message in queue_iter:
