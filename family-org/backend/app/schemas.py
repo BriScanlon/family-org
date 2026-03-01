@@ -35,6 +35,10 @@ class Go4SchoolsConnect(BaseModel):
     email: str
     password: str
 
+class GarminConnect(BaseModel):
+    email: str
+    password: str
+
 class ChoreBase(BaseModel):
     title: str
     description: Optional[str] = None
