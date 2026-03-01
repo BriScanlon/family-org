@@ -375,6 +375,36 @@ def kiosk_dashboard(db: Session = Depends(get_db)):
             f'</div>'
         )
 
+    # Garmin activities (last 7 days)
+    from datetime import timedelta
+    garmin_cutoff = now - timedelta(days=7)
+    garmin_activities = db.query(GarminActivity).filter(
+        GarminActivity.start_time >= garmin_cutoff
+    ).order_by(GarminActivity.start_time.desc()).limit(5).all()
+
+    activities_html = ""
+    if garmin_activities:
+        for act in garmin_activities:
+            dur_h = act.duration_seconds // 3600
+            dur_m = (act.duration_seconds % 3600) // 60
+            dur_str = f"{dur_h}h {dur_m}m" if dur_h > 0 else f"{dur_m}m"
+            dist_str = f" &middot; {act.distance_meters / 1000:.1f} km" if act.distance_meters else ""
+            cal_str = f" &middot; {act.calories} cal" if act.calories else ""
+            owner_color = _safe_color((act.user.preferences or {}).get("color", "#6366f1")) if act.user else "#6366f1"
+            first_name = _esc(act.user.name.split()[0]) if act.user and act.user.name else "?"
+            date_str = act.start_time.strftime("%a %d %b") if act.start_time else ""
+            activities_html += (
+                f'<div class="event-row">'
+                f'<div class="event-top">'
+                f'<span class="event-summary">{_esc(act.name)}</span>'
+                f'<span class="event-owner" style="background:{owner_color};">{first_name}</span>'
+                f'</div>'
+                f'<div class="event-time">{date_str} &middot; {dur_str}{dist_str}{cal_str}</div>'
+                f'</div>'
+            )
+    else:
+        activities_html = '<p class="empty-state">No recent activities.</p>'
+
     # Alert bar
     alert_html = ""
     if alerts:
@@ -494,6 +524,11 @@ h1,h2,h3{{color:#f8fafc;}}
   <div class="card sidebar-card">
    <h2 class="section-title">Upcoming Events</h2>
    {events_html}
+  </div>
+
+  <div class="card sidebar-card">
+   <h2 class="section-title">Recent Activities</h2>
+   {activities_html}
   </div>
  </div>
 </div>
