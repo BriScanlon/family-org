@@ -22,11 +22,14 @@ class User(Base):
     preferences = Column(JSON, default=dict, nullable=False, server_default="{}")
     go4schools_email = Column(String, nullable=True)
     go4schools_password = Column(String, nullable=True)  # Fernet-encrypted
+    garmin_email = Column(String, nullable=True)
+    garmin_password = Column(String, nullable=True)  # Fernet-encrypted
 
     chores = relationship("Chore", back_populates="assignee")
     rewards = relationship("Reward", back_populates="redeemer")
     events = relationship("Event", back_populates="user")
     alerts = relationship("Alert", back_populates="user")
+    garmin_activities = relationship("GarminActivity", back_populates="user", cascade="all, delete-orphan")
 
 class Chore(Base):
     __tablename__ = "chores"
@@ -127,3 +130,20 @@ class Alert(Base):
     created_at = Column(DateTime, server_default=func.now())
 
     user = relationship("User", back_populates="alerts")
+
+class GarminActivity(Base):
+    __tablename__ = "garmin_activities"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    garmin_activity_id = Column(String, unique=True, index=True, nullable=False)
+    activity_type = Column(String, nullable=False)
+    name = Column(String, nullable=False)
+    start_time = Column(DateTime, nullable=False)
+    duration_seconds = Column(Integer, nullable=False)
+    distance_meters = Column(Float, nullable=True)
+    calories = Column(Integer, nullable=True)
+    average_hr = Column(Integer, nullable=True)
+    synced_at = Column(DateTime, server_default=func.now())
+
+    user = relationship("User", back_populates="garmin_activities")
