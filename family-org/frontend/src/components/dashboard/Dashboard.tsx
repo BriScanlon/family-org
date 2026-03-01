@@ -1,8 +1,9 @@
 import { SummaryStrip } from './SummaryStrip'
 import { ChoreChecklist } from './ChoreChecklist'
 import { UpcomingEvents } from './UpcomingEvents'
+import { RecentActivities } from './RecentActivities'
 import { LeagueTable } from './LeagueTable'
-import type { User, Chore, Event, LeagueEntry, Alert } from '../../types'
+import type { User, Chore, Event, LeagueEntry, Alert, UserActivities } from '../../types'
 import { AlertTriangle, ThumbsUp, ThumbsDown } from 'lucide-react'
 
 interface DashboardProps {
@@ -10,6 +11,7 @@ interface DashboardProps {
   chores: Chore[]
   events: Event[]
   leagueTable: LeagueEntry[]
+  activities: UserActivities[]
   alerts: Alert[]
   onCompleteChore: (choreId: number) => void
   onAlertFeedback: (alertId: number, feedback: number) => void
@@ -17,7 +19,7 @@ interface DashboardProps {
 }
 
 export function Dashboard({
-  user, chores, events, leagueTable, alerts,
+  user, chores, events, leagueTable, activities, alerts,
   onCompleteChore, onAlertFeedback, onViewCalendar
 }: DashboardProps) {
   return (
@@ -55,6 +57,8 @@ export function Dashboard({
       <SummaryStrip chores={chores} events={events} user={user} />
 
       <UpcomingEvents events={events} onViewAll={onViewCalendar} />
+
+      <RecentActivities activities={activities} />
 
       <ChoreChecklist onComplete={onCompleteChore} userColor={(user.preferences?.color as string) || undefined} isParent={user.role === 'parent'} />
 
