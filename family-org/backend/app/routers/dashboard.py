@@ -305,18 +305,32 @@ def kiosk_dashboard(db: Session = Depends(get_db)):
     if not events:
         events_html = '<p class="empty-state">No upcoming events.</p>'
     for ev in events:
+        ev_date = ""
         ev_time = ""
         if ev.start_time:
             try:
                 dt = datetime.fromisoformat(ev.start_time)
-                ev_time = dt.strftime("%H:%M")
+                ev_date = dt.strftime("%a %d %b")
+                ev_time = dt.strftime("%H:%M") if "T" in ev.start_time else ""
             except (ValueError, TypeError):
-                ev_time = _esc(ev.start_time)
+                ev_date = _esc(ev.start_time)
+        date_time = ev_date
+        if ev_time:
+            date_time += f' &middot; {ev_time}'
         loc = f' &middot; {_esc(ev.location)}' if ev.location else ""
+        # Calendar owner badge
+        owner_badge = ""
+        if ev.user:
+            owner_color = _safe_color((ev.user.preferences or {}).get("color", "#6366f1"))
+            first_name = _esc(ev.user.name.split()[0]) if ev.user.name else "?"
+            owner_badge = f'<span class="event-owner" style="background:{owner_color};">{first_name}</span>'
         events_html += (
             f'<div class="event-row">'
-            f'<div class="event-summary">{_esc(ev.summary)}</div>'
-            f'<div class="event-time">{ev_time}{loc}</div>'
+            f'<div class="event-top">'
+            f'<span class="event-summary">{_esc(ev.summary)}</span>'
+            f'{owner_badge}'
+            f'</div>'
+            f'<div class="event-time">{date_time}{loc}</div>'
             f'</div>'
         )
 
@@ -389,7 +403,9 @@ h1,h2,h3{{color:#f8fafc;}}
 .league-name{{color:#f8fafc;flex:1;}}
 .league-points{{color:#fbbf24;font-weight:700;}}
 .event-row{{padding:8px 0;border-bottom:1px solid #334155;font-size:14px;color:#cbd5e1;}}
-.event-summary{{}}
+.event-top{{display:flex;justify-content:space-between;align-items:center;gap:8px;}}
+.event-summary{{flex:1;}}
+.event-owner{{font-size:11px;font-weight:600;padding:2px 8px;border-radius:9999px;color:#fff;white-space:nowrap;}}
 .event-time{{color:#94a3b8;font-size:13px;}}
 .alert-bar{{background:#78350f;border:1px solid #92400e;color:#fde68a;padding:12px 24px;text-align:center;font-size:14px;}}
 .alert-item{{padding:4px 0;}}
