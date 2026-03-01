@@ -4,7 +4,7 @@ from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
 from ..database import get_db
 from ..models import User
-from ..schemas import PreferencesUpdate, Go4SchoolsConnect
+from ..schemas import PreferencesUpdate, Go4SchoolsConnect, GarminConnect
 from ..services.encryption import encrypt
 from ..services.rabbitmq import send_sync_message
 from ..config import settings
@@ -114,4 +114,52 @@ def go4schools_status(current_user: User = Depends(get_me)):
         "email": current_user.go4schools_email,
         "last_sync": prefs.get("go4schools_last_sync"),
         "error": prefs.get("go4schools_error"),
+    }
+
+
+@router.post("/garmin")
+async def connect_garmin(creds: GarminConnect, db: Session = Depends(get_db), current_user: User = Depends(get_me)):
+    current_user.garmin_email = creds.email
+    current_user.garmin_password = encrypt(creds.password)
+    prefs = dict(current_user.preferences or {})
+    prefs.pop("garmin_error", None)
+    prefs["garmin_last_sync"] = None
+    current_user.preferences = prefs
+    db.add(current_user)
+    db.commit()
+    await send_sync_message("garmin_sync", {"user_id": current_user.id})
+    return {"status": "connected"}
+
+
+@router.delete("/garmin")
+def disconnect_garmin(db: Session = Depends(get_db), current_user: User = Depends(get_me)):
+    from ..models import GarminActivity
+    current_user.garmin_email = None
+    current_user.garmin_password = None
+    prefs = dict(current_user.preferences or {})
+    prefs.pop("garmin_error", None)
+    prefs.pop("garmin_last_sync", None)
+    current_user.preferences = prefs
+    db.query(GarminActivity).filter(GarminActivity.user_id == current_user.id).delete()
+    db.add(current_user)
+    db.commit()
+    return {"status": "disconnected"}
+
+
+@router.post("/garmin/sync")
+async def sync_garmin(current_user: User = Depends(get_me)):
+    if not current_user.garmin_email:
+        raise HTTPException(status_code=400, detail="Garmin not connected")
+    await send_sync_message("garmin_sync", {"user_id": current_user.id})
+    return {"status": "sync_triggered"}
+
+
+@router.get("/garmin/status")
+def garmin_status(current_user: User = Depends(get_me)):
+    prefs = current_user.preferences or {}
+    return {
+        "connected": current_user.garmin_email is not None,
+        "email": current_user.garmin_email,
+        "last_sync": prefs.get("garmin_last_sync"),
+        "error": prefs.get("garmin_error"),
     }
