@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Check, ShieldCheck, Calendar as CalendarIcon, Save, Sun, Moon, Trophy, GraduationCap, Palette } from 'lucide-react'
+import { Check, ShieldCheck, Calendar as CalendarIcon, Save, Sun, Moon, Trophy, GraduationCap, Palette, Activity } from 'lucide-react'
 import { toast } from 'react-toastify'
 import clsx from 'clsx'
 import { NeuCard } from '../ui/NeuCard'
@@ -23,6 +23,12 @@ export function SettingsView({ user, onUpdate }: SettingsViewProps) {
     connected: boolean; email: string | null; last_sync: string | null; error: string | null
   } | null>(null)
   const [g4sSaving, setG4sSaving] = useState(false)
+  const [garminEmail, setGarminEmail] = useState('')
+  const [garminPassword, setGarminPassword] = useState('')
+  const [garminStatus, setGarminStatus] = useState<{
+    connected: boolean; email: string | null; last_sync: string | null; error: string | null
+  } | null>(null)
+  const [garminSaving, setGarminSaving] = useState(false)
   const { theme, toggleTheme } = useTheme()
   const [userColor, setUserColor] = useState<string>((user.preferences?.color as string) || '#6366f1')
   const [colorSaving, setColorSaving] = useState(false)
@@ -44,6 +50,11 @@ export function SettingsView({ user, onUpdate }: SettingsViewProps) {
     fetch('/api/settings/go4schools/status')
       .then(res => res.json())
       .then(setG4sStatus)
+      .catch(() => {})
+
+    fetch('/api/settings/garmin/status')
+      .then(res => res.json())
+      .then(setGarminStatus)
       .catch(() => {})
   }, [])
 
@@ -118,6 +129,41 @@ export function SettingsView({ user, onUpdate }: SettingsViewProps) {
         toast.info('Homework sync started...')
       })
       .catch(err => toast.error(err.message))
+  }
+
+  const handleGarminConnect = () => {
+    if (!garminEmail || !garminPassword) return
+    setGarminSaving(true)
+    fetch('/api/settings/garmin', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: garminEmail, password: garminPassword }),
+    })
+      .then(res => {
+        if (!res.ok) throw new Error('Connection failed')
+        return res.json()
+      })
+      .then(() => {
+        toast.success('Garmin connected! Syncing activities...')
+        setGarminPassword('')
+        return fetch('/api/settings/garmin/status').then(r => r.json()).then(setGarminStatus)
+      })
+      .catch(err => toast.error(err.message))
+      .finally(() => setGarminSaving(false))
+  }
+
+  const handleGarminDisconnect = () => {
+    fetch('/api/settings/garmin', { method: 'DELETE' })
+      .then(() => {
+        toast.info('Garmin disconnected')
+        setGarminStatus({ connected: false, email: null, last_sync: null, error: null })
+        setGarminEmail('')
+      })
+  }
+
+  const handleGarminSync = () => {
+    fetch('/api/settings/garmin/sync', { method: 'POST' })
+      .then(() => toast.success('Garmin sync triggered'))
   }
 
   if (loading) {
@@ -260,6 +306,53 @@ export function SettingsView({ user, onUpdate }: SettingsViewProps) {
             </div>
             <NeuButton variant="teal" onClick={handleG4sConnect} disabled={g4sSaving || !g4sEmail || !g4sPassword}>
               {g4sSaving ? 'Connecting...' : 'Connect'}
+            </NeuButton>
+          </div>
+        )}
+      </NeuCard>
+
+      <NeuCard>
+        <div className="flex items-center gap-3 mb-6">
+          <div className="p-2 rounded-xl bg-accent-primary/10">
+            <Activity className="h-5 w-5 text-accent-primary" />
+          </div>
+          <h2 className="text-lg font-bold text-text-primary">Garmin Connect</h2>
+        </div>
+
+        {garminStatus?.connected ? (
+          <div className="space-y-4">
+            <div className="p-4 rounded-xl bg-surface-raised border border-border-muted space-y-2">
+              <p className="text-sm text-text-primary"><span className="text-text-muted">Account:</span> {garminStatus.email}</p>
+              {garminStatus.last_sync && (
+                <p className="text-xs text-text-muted">Last synced: {new Date(garminStatus.last_sync).toLocaleString()}</p>
+              )}
+              {garminStatus.error && (
+                <p className="text-xs text-accent-red bg-accent-red/10 rounded-lg px-3 py-1.5 inline-block">{garminStatus.error}</p>
+              )}
+            </div>
+            <div className="flex gap-3">
+              <NeuButton variant="teal" size="sm" onClick={handleGarminSync}>Sync Now</NeuButton>
+              <NeuButton variant="ghost" size="sm" onClick={handleGarminDisconnect}>Disconnect</NeuButton>
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            <input
+              type="email"
+              placeholder="Garmin email"
+              value={garminEmail}
+              onChange={e => setGarminEmail(e.target.value)}
+              className="w-full px-4 py-2.5 rounded-xl bg-surface-raised border border-border-muted text-text-primary text-sm focus:outline-none focus:border-accent-primary"
+            />
+            <input
+              type="password"
+              placeholder="Garmin password"
+              value={garminPassword}
+              onChange={e => setGarminPassword(e.target.value)}
+              className="w-full px-4 py-2.5 rounded-xl bg-surface-raised border border-border-muted text-text-primary text-sm focus:outline-none focus:border-accent-primary"
+            />
+            <NeuButton variant="teal" onClick={handleGarminConnect} disabled={garminSaving}>
+              {garminSaving ? 'Connecting...' : 'Connect'}
             </NeuButton>
           </div>
         )}
