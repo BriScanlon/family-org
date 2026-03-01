@@ -3,7 +3,7 @@ import { motion } from 'framer-motion'
 import { ChevronRight, Zap } from 'lucide-react'
 import { ToastContainer, toast } from 'react-toastify'
 import 'react-toastify/dist/ReactToastify.css'
-import type { User, Chore, Reward, Event, Alert, LeagueEntry } from './types'
+import type { User, Chore, Reward, Event, Alert, LeagueEntry, UserActivities } from './types'
 import { Navbar } from './components/layout/Navbar'
 import { BottomNav } from './components/layout/BottomNav'
 import { Dashboard } from './components/dashboard/Dashboard'
@@ -27,6 +27,7 @@ function App() {
   const [events, setEvents] = useState<Event[]>([])
   const [alerts, setAlerts] = useState<Alert[]>([])
   const [leagueTable, setLeagueTable] = useState<LeagueEntry[]>([])
+  const [activities, setActivities] = useState<UserActivities[]>([])
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState<'dashboard' | 'calendar' | 'chores' | 'rewards' | 'settings'>('dashboard')
   const ws = useRef<WebSocket | null>(null)
@@ -54,14 +55,16 @@ function App() {
       fetch('/api/rewards/').then(res => res.json()),
       fetch('/api/dashboard/events').then(res => res.json()),
       fetch('/api/dashboard/alerts').then(res => res.json()),
-      fetch('/api/dashboard/league-table').then(res => res.json())
-    ]).then(([userData, choresData, rewardsData, eventsData, alertsData, leagueData]) => {
+      fetch('/api/dashboard/league-table').then(res => res.json()),
+      fetch('/api/dashboard/activities').then(res => res.json()),
+    ]).then(([userData, choresData, rewardsData, eventsData, alertsData, leagueData, activitiesData]) => {
       setUser(userData)
       setChores(choresData)
       setRewards(rewardsData)
       setEvents(eventsData)
       setAlerts(alertsData || [])
       setLeagueTable(leagueData || [])
+      setActivities(activitiesData || [])
       setLoading(false)
     }).catch(() => {
       setUser(null)
@@ -213,6 +216,7 @@ function App() {
                 chores={chores}
                 events={events}
                 leagueTable={leagueTable}
+                activities={activities}
                 alerts={alerts}
                 onCompleteChore={handleCompleteChore}
                 onAlertFeedback={handleAlertFeedback}

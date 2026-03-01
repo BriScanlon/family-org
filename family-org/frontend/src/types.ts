@@ -117,3 +117,21 @@ export interface FamilyChildOverview {
   color?: string | null
   rosters: MyRoster[]
 }
+
+export interface GarminActivity {
+  id: number
+  activity_type: string
+  name: string
+  start_time: string
+  duration_seconds: number
+  distance_meters: number | null
+  calories: number | null
+  average_hr: number | null
+}
+
+export interface UserActivities {
+  user_id: number
+  user_name: string
+  color: string
+  activities: GarminActivity[]
+}
