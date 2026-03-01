@@ -16,3 +16,4 @@ aio-pika
 requests
 cryptography
 playwright
+garminconnect
