@@ -24,6 +24,144 @@ def _safe_color(raw: str, default: str = "#6366f1") -> str:
     return default
 
 
+FREQ_LABELS = {"daily": "Daily", "weekly": "Weekly", "monthly": "Monthly"}
+FREQ_ORDER = ["daily", "weekly", "monthly"]
+TICKER_THRESHOLD = 6  # items before ticker activates
+
+
+def _build_freq_card(card_id: str, name: str, color: str, done: int, total: int, freq_data: dict) -> str:
+    """Build a child/family card with frequency tabs and optional ticker."""
+    safe_color = _safe_color(color)
+    pct = int(done / total * 100) if total > 0 else 0
+
+    # Determine which frequencies have data
+    active_freqs = [f for f in FREQ_ORDER if f in freq_data]
+    if not active_freqs:
+        return ""
+
+    num_tabs = len(active_freqs)
+    tab_duration = 10  # seconds per tab
+    cycle = num_tabs * tab_duration
+
+    # Tab bar pills
+    tab_pills = ""
+    for i, freq in enumerate(active_freqs):
+        tab_pills += (
+            f'<span class="freq-pill freq-pill-{card_id}-{i}">'
+            f'{FREQ_LABELS[freq]}'
+            f'</span>'
+        )
+
+    # Tab panels
+    panels_html = ""
+    for i, freq in enumerate(active_freqs):
+        rosters = freq_data[freq]
+        # Build roster groups or flat list
+        panel_content = ""
+        item_count = 0
+        if isinstance(rosters, list) and rosters and isinstance(rosters[0], dict) and "name" in rosters[0]:
+            # Roster-grouped format
+            for r in rosters:
+                chore_rows = ""
+                for cr in r["chores"]:
+                    icon = "&#10003;" if cr["done"] else "&#9675;"
+                    done_class = " chore-done" if cr["done"] else ""
+                    chore_rows += (
+                        f'<div class="chore-row{done_class}">'
+                        f'<span class="chore-icon{" chore-icon-done" if cr["done"] else ""}">{icon}</span>'
+                        f'<span class="chore-title">{_esc(cr["title"])}</span>'
+                        f'</div>'
+                    )
+                    item_count += 1
+                panel_content += (
+                    f'<div class="roster-group">'
+                    f'<div class="roster-label">{_esc(r["name"])}</div>'
+                    f'{chore_rows}'
+                    f'</div>'
+                )
+        else:
+            # Flat list format (family tasks)
+            for cr in rosters:
+                icon = "&#10003;" if cr["done"] else "&#9675;"
+                done_class = " chore-done" if cr["done"] else ""
+                panel_content += (
+                    f'<div class="chore-row{done_class}">'
+                    f'<span class="chore-icon{" chore-icon-done" if cr["done"] else ""}">{icon}</span>'
+                    f'<span class="chore-title">{_esc(cr["title"])}</span>'
+                    f'</div>'
+                )
+                item_count += 1
+
+        # Wrap in ticker if overflow expected
+        if item_count > TICKER_THRESHOLD:
+            scroll_duration = item_count * 2
+            panel_content = (
+                f'<div class="ticker-wrap">'
+                f'<div class="ticker-content" style="animation:ticker-scroll {scroll_duration}s linear infinite;">'
+                f'{panel_content}'
+                f'{panel_content}'
+                f'</div>'
+                f'</div>'
+            )
+
+        panels_html += (
+            f'<div class="freq-panel freq-panel-{card_id}-{i}">'
+            f'{panel_content}'
+            f'</div>'
+        )
+
+    # Per-card keyframes for tab rotation
+    card_keyframes = ""
+    for i in range(num_tabs):
+        show_start = (i * tab_duration / cycle) * 100
+        show_end = ((i + 1) * tab_duration / cycle) * 100
+        card_keyframes += (
+            f'@keyframes show-{card_id}-{i}{{'
+            f'0%{{opacity:0;height:0;overflow:hidden;}}'
+            f'{show_start:.1f}%{{opacity:0;height:0;overflow:hidden;}}'
+            f'{show_start + 0.5:.1f}%{{opacity:1;height:auto;overflow:visible;}}'
+            f'{show_end - 0.5:.1f}%{{opacity:1;height:auto;overflow:visible;}}'
+            f'{show_end:.1f}%{{opacity:0;height:0;overflow:hidden;}}'
+            f'100%{{opacity:0;height:0;overflow:hidden;}}'
+            f'}}'
+        )
+        card_keyframes += (
+            f'@keyframes pill-{card_id}-{i}{{'
+            f'0%{{background:#334155;color:#94a3b8;}}'
+            f'{show_start:.1f}%{{background:#334155;color:#94a3b8;}}'
+            f'{show_start + 0.5:.1f}%{{background:#475569;color:#f8fafc;}}'
+            f'{show_end - 0.5:.1f}%{{background:#475569;color:#f8fafc;}}'
+            f'{show_end:.1f}%{{background:#334155;color:#94a3b8;}}'
+            f'100%{{background:#334155;color:#94a3b8;}}'
+            f'}}'
+        )
+
+    # Per-card style block with staggered delays
+    style_rules = f'<style>{card_keyframes}'
+    delay = int(card_id.replace("child", "").replace("family", "99") or "0") * 3
+    for i in range(num_tabs):
+        style_rules += f'.freq-panel-{card_id}-{i}{{animation:show-{card_id}-{i} {cycle}s {delay}s infinite;}}'
+        style_rules += f'.freq-pill-{card_id}-{i}{{animation:pill-{card_id}-{i} {cycle}s {delay}s infinite;}}'
+    style_rules += '</style>'
+
+    return (
+        f'{style_rules}'
+        f'<div class="card child-card">'
+        f'<div class="child-header" style="border-top-color:{safe_color};">'
+        f'<span class="child-name">{_esc(name)}</span>'
+        f'<span class="child-count">{done}/{total}</span>'
+        f'</div>'
+        f'<div class="child-body">'
+        f'<div class="progress-track">'
+        f'<div class="progress-fill" style="background:{safe_color};width:{pct}%;"></div>'
+        f'</div>'
+        f'<div class="freq-tab-bar">{tab_pills}</div>'
+        f'{panels_html}'
+        f'</div>'
+        f'</div>'
+    )
+
+
 def _build_league_table(db: Session) -> list:
     """Build the league table data. Used by both the API route and kiosk dashboard."""
     # Check if any parent has hidden the league table
@@ -167,15 +305,15 @@ def kiosk_dashboard(db: Session = Depends(get_db)):
 
     for child in children:
         assignments = db.query(RosterAssignment).filter(RosterAssignment.user_id == child.id).all()
-        child_rosters = []
         child_done = 0
         child_total = 0
+        # Group roster chores by frequency
+        freq_rosters = {"daily": {}, "weekly": {}, "monthly": {}}
         for a in assignments:
             roster = db.query(Roster).filter(Roster.id == a.roster_id).first()
             if not roster:
                 continue
             chores = db.query(Chore).filter(Chore.roster_id == roster.id).all()
-            roster_chores = []
             for c in chores:
                 comp = db.query(ChoreCompletion).filter(
                     ChoreCompletion.chore_id == c.id,
@@ -186,15 +324,16 @@ def kiosk_dashboard(db: Session = Depends(get_db)):
                 if is_done:
                     child_done += 1
                 child_total += 1
-                roster_chores.append({"title": c.title, "done": is_done})
-            child_rosters.append({"name": roster.name, "chores": roster_chores})
+                freq = c.frequency if c.frequency in freq_rosters else "daily"
+                if roster.name not in freq_rosters[freq]:
+                    freq_rosters[freq][roster.name] = []
+                freq_rosters[freq][roster.name].append({"title": c.title, "done": is_done})
         # Non-roster chores assigned directly to this child
         direct_chores = db.query(Chore).filter(
             Chore.assignee_id == child.id,
             Chore.roster_id == None,
             Chore.is_completed == False,
         ).all()
-        direct_chore_items = []
         for c in direct_chores:
             comp = db.query(ChoreCompletion).filter(
                 ChoreCompletion.chore_id == c.id,
@@ -205,9 +344,15 @@ def kiosk_dashboard(db: Session = Depends(get_db)):
             if is_done:
                 child_done += 1
             child_total += 1
-            direct_chore_items.append({"title": c.title, "done": is_done})
-        if direct_chore_items:
-            child_rosters.append({"name": "Tasks", "chores": direct_chore_items})
+            freq = c.frequency if c.frequency in freq_rosters else "daily"
+            if "Tasks" not in freq_rosters[freq]:
+                freq_rosters[freq]["Tasks"] = []
+            freq_rosters[freq]["Tasks"].append({"title": c.title, "done": is_done})
+        # Convert to list format: {freq: [{"name": roster_name, "chores": [...]}]}
+        freq_data = {}
+        for freq, roster_dict in freq_rosters.items():
+            if roster_dict:
+                freq_data[freq] = [{"name": rn, "chores": rc} for rn, rc in roster_dict.items()]
         total_chores += child_total
         total_done += child_done
         color = (child.preferences or {}).get("color", "#6366f1")
@@ -216,7 +361,7 @@ def kiosk_dashboard(db: Session = Depends(get_db)):
             "color": color,
             "done": child_done,
             "total": child_total,
-            "rosters": child_rosters,
+            "freq_data": freq_data,
         })
 
     # --- Unassigned family tasks (non-roster, no assignee) ---
@@ -225,14 +370,22 @@ def kiosk_dashboard(db: Session = Depends(get_db)):
         Chore.roster_id == None,
         Chore.is_completed == False,
     ).all()
-    family_task_items = []
+    family_freq_data = {"daily": [], "weekly": [], "monthly": []}
+    family_done_count = 0
+    family_total_count = 0
     for c in family_tasks:
         comp = db.query(ChoreCompletion).filter(
             ChoreCompletion.chore_id == c.id,
             ChoreCompletion.completed_at >= today_start
         ).first()
         is_done = comp is not None
-        family_task_items.append({"title": c.title, "done": is_done})
+        if is_done:
+            family_done_count += 1
+        family_total_count += 1
+        freq = c.frequency if c.frequency in family_freq_data else "daily"
+        family_freq_data[freq].append({"title": c.title, "done": is_done})
+    # Remove empty frequencies
+    family_freq_data = {k: v for k, v in family_freq_data.items() if v}
 
     # --- League table ---
     league = _build_league_table(db)
@@ -266,65 +419,26 @@ def kiosk_dashboard(db: Session = Depends(get_db)):
     children_html = ""
     if not children_data:
         children_html = '<p class="empty-state">No children found.</p>'
-    for ch in children_data:
-        pct = int(ch["done"] / ch["total"] * 100) if ch["total"] > 0 else 0
-        safe_color = _safe_color(ch["color"])
-        rosters_html = ""
-        for r in ch["rosters"]:
-            chore_rows = ""
-            for cr in r["chores"]:
-                icon = "&#10003;" if cr["done"] else "&#9675;"
-                done_class = " chore-done" if cr["done"] else ""
-                chore_rows += (
-                    f'<div class="chore-row{done_class}">'
-                    f'<span class="chore-icon{" chore-icon-done" if cr["done"] else ""}">{icon}</span>'
-                    f'<span class="chore-title">{_esc(cr["title"])}</span>'
-                    f'</div>'
-                )
-            rosters_html += (
-                f'<div class="roster-group">'
-                f'<div class="roster-label">{_esc(r["name"])}</div>'
-                f'{chore_rows}'
-                f'</div>'
-            )
-        children_html += (
-            f'<div class="card child-card">'
-            f'<div class="child-header" style="border-top-color:{safe_color};">'
-            f'<span class="child-name">{_esc(ch["name"])}</span>'
-            f'<span class="child-count">{ch["done"]}/{ch["total"]}</span>'
-            f'</div>'
-            f'<div class="child-body">'
-            f'<div class="progress-track">'
-            f'<div class="progress-fill" style="background:{safe_color};width:{pct}%;"></div>'
-            f'</div>'
-            f'{rosters_html}'
-            f'</div>'
-            f'</div>'
+    for idx, ch in enumerate(children_data):
+        children_html += _build_freq_card(
+            card_id=f"child{idx}",
+            name=ch["name"],
+            color=ch["color"],
+            done=ch["done"],
+            total=ch["total"],
+            freq_data=ch["freq_data"],
         )
 
     # Family tasks card
     family_tasks_html = ""
-    if family_task_items:
-        task_rows = ""
-        for t in family_task_items:
-            icon = "&#10003;" if t["done"] else "&#9675;"
-            done_class = " chore-done" if t["done"] else ""
-            task_rows += (
-                f'<div class="chore-row{done_class}">'
-                f'<span class="chore-icon{" chore-icon-done" if t["done"] else ""}">{icon}</span>'
-                f'<span class="chore-title">{_esc(t["title"])}</span>'
-                f'</div>'
-            )
-        family_tasks_html = (
-            f'<div class="card child-card">'
-            f'<div class="child-header" style="border-top-color:#f59e0b;">'
-            f'<span class="child-name">Family Tasks</span>'
-            f'<span class="child-count">{sum(1 for t in family_task_items if t["done"])}/{len(family_task_items)}</span>'
-            f'</div>'
-            f'<div class="child-body">'
-            f'{task_rows}'
-            f'</div>'
-            f'</div>'
+    if family_freq_data:
+        family_tasks_html = _build_freq_card(
+            card_id="family",
+            name="Family Tasks",
+            color="#f59e0b",
+            done=family_done_count,
+            total=family_total_count,
+            freq_data=family_freq_data,
         )
 
     # League table
@@ -482,6 +596,12 @@ h1,h2,h3{{color:#f8fafc;}}
 .alert-item{{padding:4px 0;}}
 .section-title{{font-size:14px;font-weight:600;text-transform:uppercase;color:#94a3b8;margin-bottom:12px;}}
 .empty-state{{color:#475569;font-style:italic;}}
+.freq-tab-bar{{display:flex;gap:6px;margin-bottom:8px;}}
+.freq-pill{{font-size:11px;text-transform:uppercase;letter-spacing:0.05em;padding:2px 10px;border-radius:9999px;background:#334155;color:#94a3b8;}}
+.freq-panel{{}}
+.ticker-wrap{{max-height:200px;overflow:hidden;position:relative;}}
+.ticker-content{{display:flex;flex-direction:column;}}
+@keyframes ticker-scroll{{0%{{transform:translateY(0);}}100%{{transform:translateY(-50%);}}}}
 .sidebar-card{{margin-bottom:16px;}}
 .header{{display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;}}
 .header h1{{font-size:28px;}}
