@@ -507,16 +507,36 @@ def kiosk_dashboard(db: Session = Depends(get_db)):
             freq_data=ch["freq_data"],
         )
 
-    # Family tasks card
+    # Family tasks cards — one per frequency
     family_tasks_html = ""
-    if family_freq_data:
-        family_tasks_html = _build_freq_card(
-            card_id="family",
-            name="Family Tasks",
-            color="#f59e0b",
-            done=family_done_count,
-            total=family_total_count,
-            freq_data=family_freq_data,
+    for freq in FREQ_ORDER:
+        items = family_freq_data.get(freq)
+        if not items:
+            continue
+        done_count = sum(1 for t in items if t["done"])
+        task_rows = ""
+        for t in items:
+            icon = "&#10003;" if t["done"] else "&#9675;"
+            done_class = " chore-done" if t["done"] else ""
+            task_rows += (
+                f'<div class="chore-row{done_class}">'
+                f'<span class="chore-icon{" chore-icon-done" if t["done"] else ""}">{icon}</span>'
+                f'<span class="chore-title">{_esc(t["title"])}</span>'
+                f'</div>'
+            )
+        family_tasks_html += (
+            f'<div class="card child-card">'
+            f'<div class="child-header" style="border-top-color:#f59e0b;">'
+            f'<span class="child-name">{FREQ_LABELS[freq]} Family Tasks</span>'
+            f'<span class="child-count">{done_count}/{len(items)}</span>'
+            f'</div>'
+            f'<div class="child-body">'
+            f'<div class="progress-track">'
+            f'<div class="progress-fill" style="background:#f59e0b;width:{int(done_count / len(items) * 100) if items else 0}%;"></div>'
+            f'</div>'
+            f'{task_rows}'
+            f'</div>'
+            f'</div>'
         )
 
     # Bonus chores card
