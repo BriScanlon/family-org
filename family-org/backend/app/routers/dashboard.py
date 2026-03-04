@@ -597,8 +597,8 @@ h1,h2,h3{{color:#f8fafc;}}
 .section-title{{font-size:14px;font-weight:600;text-transform:uppercase;color:#94a3b8;margin-bottom:12px;}}
 .empty-state{{color:#475569;font-style:italic;}}
 .freq-tab-bar{{display:flex;gap:6px;margin-bottom:8px;}}
-.freq-pill{{font-size:11px;text-transform:uppercase;letter-spacing:0.05em;padding:2px 10px;border-radius:9999px;background:#334155;color:#94a3b8;}}
-.freq-panel{{}}
+.freq-pill{{font-size:11px;text-transform:uppercase;letter-spacing:0.05em;padding:3px 10px;border-radius:9999px;background:#334155;color:#94a3b8;font-weight:600;}}
+.freq-panel{{overflow:hidden;}}
 .ticker-wrap{{max-height:200px;overflow:hidden;position:relative;}}
 .ticker-content{{display:flex;flex-direction:column;}}
 @keyframes ticker-scroll{{0%{{transform:translateY(0);}}100%{{transform:translateY(-50%);}}}}
