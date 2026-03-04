@@ -453,6 +453,18 @@ def kiosk_dashboard(db: Session = Depends(get_db)):
     # Remove empty frequencies
     family_freq_data = {k: v for k, v in family_freq_data.items() if v}
 
+    # --- Bonus chores ---
+    bonus_chores = db.query(Chore).filter(
+        Chore.is_bonus == True,
+        Chore.is_completed == False,
+    ).all()
+    bonus_items = []
+    for c in bonus_chores:
+        bonus_items.append({
+            "title": c.title,
+            "reward": c.reward_money or 0.0,
+        })
+
     # --- League table ---
     league = _build_league_table(db)
 
@@ -505,6 +517,30 @@ def kiosk_dashboard(db: Session = Depends(get_db)):
             done=family_done_count,
             total=family_total_count,
             freq_data=family_freq_data,
+        )
+
+    # Bonus chores card
+    bonus_html = ""
+    if bonus_items:
+        bonus_rows = ""
+        for b in bonus_items:
+            bonus_rows += (
+                f'<div class="chore-row">'
+                f'<span class="chore-icon" style="color:#fbbf24;">&#9733;</span>'
+                f'<span class="chore-title">{_esc(b["title"])}</span>'
+                f'<span class="bonus-reward">&pound;{b["reward"]:.2f}</span>'
+                f'</div>'
+            )
+        bonus_html = (
+            f'<div class="card child-card">'
+            f'<div class="child-header" style="border-top-color:#a855f7;">'
+            f'<span class="child-name">Bonus Chores</span>'
+            f'<span class="child-count">{len(bonus_items)}</span>'
+            f'</div>'
+            f'<div class="child-body">'
+            f'{bonus_rows}'
+            f'</div>'
+            f'</div>'
         )
 
     # League table
@@ -648,7 +684,8 @@ h1,h2,h3{{color:#f8fafc;}}
 .chore-done{{opacity:0.5;text-decoration:line-through;}}
 .chore-icon{{font-size:16px;color:#94a3b8;}}
 .chore-icon-done{{color:#22c55e;}}
-.chore-title{{}}
+.chore-title{{flex:1;}}
+.bonus-reward{{color:#fbbf24;font-weight:600;font-size:13px;white-space:nowrap;}}
 .league-row{{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #334155;}}
 .league-rank{{color:#64748b;width:24px;}}
 .league-name{{color:#f8fafc;flex:1;}}
@@ -699,6 +736,7 @@ h1,h2,h3{{color:#f8fafc;}}
  <div class="children-grid">
   {children_html}
   {family_tasks_html}
+  {bonus_html}
  </div>
 
  <div>
