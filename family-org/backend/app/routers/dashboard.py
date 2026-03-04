@@ -40,6 +40,72 @@ def _build_freq_card(card_id: str, name: str, color: str, done: int, total: int,
         return ""
 
     num_tabs = len(active_freqs)
+
+    if num_tabs == 1:
+        # Single frequency — no tabs, no animation
+        freq = active_freqs[0]
+        rosters = freq_data[freq]
+        panel_content = ""
+        item_count = 0
+        if isinstance(rosters, list) and rosters and isinstance(rosters[0], dict) and "name" in rosters[0]:
+            for r in rosters:
+                chore_rows = ""
+                for cr in r["chores"]:
+                    icon = "&#10003;" if cr["done"] else "&#9675;"
+                    done_class = " chore-done" if cr["done"] else ""
+                    chore_rows += (
+                        f'<div class="chore-row{done_class}">'
+                        f'<span class="chore-icon{" chore-icon-done" if cr["done"] else ""}">{icon}</span>'
+                        f'<span class="chore-title">{_esc(cr["title"])}</span>'
+                        f'</div>'
+                    )
+                    item_count += 1
+                panel_content += (
+                    f'<div class="roster-group">'
+                    f'<div class="roster-label">{_esc(r["name"])}</div>'
+                    f'{chore_rows}'
+                    f'</div>'
+                )
+        else:
+            for cr in rosters:
+                icon = "&#10003;" if cr["done"] else "&#9675;"
+                done_class = " chore-done" if cr["done"] else ""
+                panel_content += (
+                    f'<div class="chore-row{done_class}">'
+                    f'<span class="chore-icon{" chore-icon-done" if cr["done"] else ""}">{icon}</span>'
+                    f'<span class="chore-title">{_esc(cr["title"])}</span>'
+                    f'</div>'
+                )
+                item_count += 1
+
+        if item_count > TICKER_THRESHOLD:
+            scroll_duration = item_count * 2
+            panel_content = (
+                f'<div class="ticker-wrap">'
+                f'<div class="ticker-content" style="animation:ticker-scroll {scroll_duration}s linear infinite;">'
+                f'{panel_content}'
+                f'{panel_content}'
+                f'</div>'
+                f'</div>'
+            )
+
+        label = FREQ_LABELS[freq]
+        return (
+            f'<div class="card child-card">'
+            f'<div class="child-header" style="border-top-color:{safe_color};">'
+            f'<span class="child-name">{_esc(name)}</span>'
+            f'<span class="child-count">{done}/{total}</span>'
+            f'</div>'
+            f'<div class="child-body">'
+            f'<div class="progress-track">'
+            f'<div class="progress-fill" style="background:{safe_color};width:{pct}%;"></div>'
+            f'</div>'
+            f'<div class="freq-tab-bar"><span class="freq-pill" style="background:#475569;color:#f8fafc;">{label}</span></div>'
+            f'{panel_content}'
+            f'</div>'
+            f'</div>'
+        )
+
     tab_duration = 10  # seconds per tab
     cycle = num_tabs * tab_duration
 
@@ -552,7 +618,7 @@ body{{background:#0f172a;color:#e2e8f0;font-family:system-ui,-apple-system,sans-
   0%,100%{{opacity:1;}}
   50%{{opacity:0.92;}}
 }}
-.child-card{{will-change:opacity;}}
+.child-card{{max-height:400px;overflow:hidden;will-change:opacity;}}
 .child-card:nth-child(1){{animation:breathe 45s ease-in-out infinite;}}
 .child-card:nth-child(2){{animation:breathe 55s ease-in-out 15s infinite;}}
 .child-card:nth-child(3){{animation:breathe 50s ease-in-out 30s infinite;}}
@@ -573,7 +639,7 @@ h1,h2,h3{{color:#f8fafc;}}
 .child-header{{display:flex;justify-content:space-between;align-items:center;border-top:3px solid;padding-top:8px;margin-bottom:8px;}}
 .child-name{{font-weight:700;font-size:18px;color:#f8fafc;}}
 .child-count{{font-size:14px;color:#94a3b8;}}
-.child-body{{padding-top:4px;}}
+.child-body{{max-height:320px;overflow:hidden;padding-top:4px;}}
 .progress-track{{background:#334155;border-radius:6px;height:6px;overflow:hidden;margin-bottom:8px;}}
 .progress-fill{{height:100%;border-radius:6px;transition:width 0.3s;}}
 .roster-group{{margin-top:8px;}}

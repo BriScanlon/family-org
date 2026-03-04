@@ -68,6 +68,12 @@ class TestFamilyOrgEndToEnd(unittest.TestCase):
         self.assertIn('class="freq-tab-bar"', response.text)
         self.assertIn('class="freq-panel', response.text)
 
+    def test_kiosk_dashboard_has_ticker_css(self):
+        response = requests.get(f"{self.BACKEND_URL}/dashboard/kiosk")
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("ticker-scroll", response.text)
+        self.assertIn("ticker-wrap", response.text)
+
     def test_04_user_preferences(self):
         """Test that user preferences field exists and defaults to empty."""
         user = requests.post(f"{self.BACKEND_URL}/auth/test-user", json={
