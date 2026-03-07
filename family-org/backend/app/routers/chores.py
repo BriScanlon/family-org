@@ -110,6 +110,10 @@ async def complete_chore(chore_id: int, user_id: int, db: Session = Depends(get_
     chore.last_completed_at = func.now()
     chore.assignee_id = user_id
 
+    # Record a ChoreCompletion so it counts in the league table
+    completion = ChoreCompletion(chore_id=chore_id, user_id=user_id)
+    db.add(completion)
+
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
         db.commit()

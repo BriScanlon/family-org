@@ -238,6 +238,10 @@ def _build_league_table(db: Session) -> list:
             return []
 
     users = db.query(User).all()
+    # Start of current month for monthly jobs count
+    now = datetime.now()
+    month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+
     league = []
     for user in users:
         standard_completed = db.query(Chore).filter(
@@ -252,17 +256,23 @@ def _build_league_table(db: Session) -> list:
             Chore.is_completed == True
         ).count()
 
+        monthly_completions = db.query(ChoreCompletion).filter(
+            ChoreCompletion.user_id == user.id,
+            ChoreCompletion.completed_at >= month_start
+        ).count()
+
         league.append({
             "user_id": user.id,
             "name": user.name,
             "standard_completed": standard_completed,
             "bonus_completed": bonus_completed,
             "total_points": user.points,
-            "total_balance": user.balance
+            "total_balance": user.balance,
+            "monthly_completions": monthly_completions,
         })
 
-    # Sort by standard_completed then bonus_completed
-    league.sort(key=lambda x: (x["standard_completed"], x["bonus_completed"]), reverse=True)
+    # Sort by points, then monthly completions as tiebreaker
+    league.sort(key=lambda x: (x["total_points"], x["monthly_completions"]), reverse=True)
     return league
 
 
@@ -274,7 +284,10 @@ def get_league_table(db: Session = Depends(get_db)):
 
 @router.get("/events")
 def get_family_events(db: Session = Depends(get_db)):
-    events = db.query(Event).all()
+    now_iso = datetime.now().isoformat()
+    events = db.query(Event).filter(
+        Event.start_time >= now_iso
+    ).order_by(Event.start_time).all()
     # Join with user to get names
     results = []
     for event in events:
@@ -573,6 +586,7 @@ def kiosk_dashboard(db: Session = Depends(get_db)):
             f'<div class="league-row">'
             f'<span class="league-rank">{rank}</span>'
             f'<span class="league-name">{_esc(entry["name"])}</span>'
+            f'<span class="league-jobs">{entry["monthly_completions"]} jobs</span>'
             f'<span class="league-points">{entry["total_points"]} pts</span>'
             f'</div>'
         )
@@ -709,6 +723,7 @@ h1,h2,h3{{color:#f8fafc;}}
 .league-row{{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #334155;}}
 .league-rank{{color:#64748b;width:24px;}}
 .league-name{{color:#f8fafc;flex:1;}}
+.league-jobs{{color:#94a3b8;font-size:13px;margin-right:12px;}}
 .league-points{{color:#fbbf24;font-weight:700;}}
 .event-row{{padding:8px 0;border-bottom:1px solid #334155;font-size:14px;color:#cbd5e1;}}
 .event-top{{display:flex;justify-content:space-between;align-items:center;gap:8px;}}
