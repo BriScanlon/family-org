@@ -6,6 +6,17 @@ from google_auth_oauthlib.flow import Flow
 from google.auth.transport import requests
 import json
 import os
+import hashlib
+import base64
+import secrets
+
+
+def _generate_pkce():
+    """Generate PKCE code_verifier and code_challenge (S256)."""
+    code_verifier = secrets.token_urlsafe(64)
+    digest = hashlib.sha256(code_verifier.encode("ascii")).digest()
+    code_challenge = base64.urlsafe_b64encode(digest).rstrip(b"=").decode("ascii")
+    return code_verifier, code_challenge
 
 from ..database import get_db
 from ..models import User
@@ -13,6 +24,9 @@ from ..config import settings
 from ..services.auth_service import create_access_token
 
 router = APIRouter(prefix="/auth", tags=["auth"])
+
+# In-memory store for PKCE code verifiers keyed by OAuth state
+_pending_states: dict[str, str] = {}
 
 # Configure the flow for Google OAuth
 CLIENT_CONFIG = {
@@ -42,21 +56,28 @@ def login():
         scopes=SCOPES,
         redirect_uri=settings.GOOGLE_REDIRECT_URI
     )
+    code_verifier, code_challenge = _generate_pkce()
     authorization_url, state = flow.authorization_url(
         access_type="offline",
-        include_granted_scopes="true"
+        include_granted_scopes="true",
+        code_challenge=code_challenge,
+        code_challenge_method="S256"
     )
-    # You might want to store state in a session or cookie for security
+    # Store code_verifier keyed by state so callback can retrieve it
+    _pending_states[state] = code_verifier
     return RedirectResponse(authorization_url)
 
 @router.get("/callback")
-async def callback(code: str, db: Session = Depends(get_db)):
+async def callback(code: str, state: str, db: Session = Depends(get_db)):
+    code_verifier = _pending_states.pop(state, None)
+    if not code_verifier:
+        raise HTTPException(status_code=400, detail="Invalid or expired OAuth state")
     flow = Flow.from_client_config(
         CLIENT_CONFIG,
         scopes=SCOPES,
         redirect_uri=settings.GOOGLE_REDIRECT_URI
     )
-    flow.fetch_token(code=code)
+    flow.fetch_token(code=code, code_verifier=code_verifier)
     credentials = flow.credentials
 
     # Verify the ID token
@@ -128,21 +149,4 @@ async def get_me(request: Request, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.email == payload.get("sub")).first()
     if not user:
         raise HTTPException(status_code=401, detail="User not found")
-    return user
-
-@router.post("/test-user")
-def create_test_user(user_in: dict, db: Session = Depends(get_db)):
-    """Create a test user or return if exists."""
-    user = db.query(User).filter(User.email == user_in['email']).first()
-    if user:
-        return user
-        
-    user = User(
-        google_id=f"test_{user_in['email']}",
-        email=user_in['email'],
-        name=user_in['name']
-    )
-    db.add(user)
-    db.commit()
-    db.refresh(user)
     return user

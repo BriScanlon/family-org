@@ -265,10 +265,9 @@ async def calendar_periodic_sync():
                 User.google_refresh_token.isnot(None),
             ).all()
             for user in users:
-                if user.synced_calendars:
-                    from .services.rabbitmq import send_sync_message
-                    await send_sync_message("calendar_sync", {"user_id": user.id})
-                    print(f"[Worker] Queued periodic calendar sync for {user.email}")
+                from .services.rabbitmq import send_sync_message
+                await send_sync_message("calendar_sync", {"user_id": user.id})
+                print(f"[Worker] Queued periodic calendar sync for {user.email}")
             db.close()
         except Exception as e:
             print(f"[Worker] Error in calendar_periodic_sync: {e}")
