@@ -121,7 +121,6 @@ export function ChoresView({ chores, onComplete, onCreate, onEdit, onDelete, onU
                 <tbody className="divide-y divide-border-muted">
                   {chores.map(chore => {
                     const isLocked = chore.is_bonus && !standardChoresDone
-                    const canComplete = !chore.is_completed && !isLocked
                     return (
                       <tr key={chore.id} className={clsx(
                         'transition-colors',

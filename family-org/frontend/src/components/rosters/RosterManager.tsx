@@ -174,7 +174,7 @@ export function RosterManager({ onUpdate }: RosterManagerProps) {
 
   // Build the chore pool: chores without a roster_id that aren't bonus
   const rosteredChoreIds = new Set(rosters.flatMap(r => r.chores.map(c => c.id)))
-  const chorePool = allChores.filter(c => !c.roster_id && !c.is_bonus && !rosteredChoreIds.has(c.id))
+  const chorePool = allChores.filter(c => !(c as Chore & { roster_id?: number }).roster_id && !c.is_bonus && !rosteredChoreIds.has(c.id))
 
   // Map from member id -> roster (use the first roster assigned to them)
   const memberRosterMap = new Map<number, Roster>()
