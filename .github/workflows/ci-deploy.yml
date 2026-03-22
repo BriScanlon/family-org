@@ -93,7 +93,17 @@ jobs:
     name: E2E Tests
     runs-on: [self-hosted, linux, x64]
     steps:
+      - name: Clean workspace
+        run: |
+          sudo rm -rf $GITHUB_WORKSPACE/* $GITHUB_WORKSPACE/.??* || true
+        working-directory: /
+
       - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
 
       - name: Start test stack
         run: |
@@ -131,6 +141,7 @@ jobs:
             -f docker-compose.yml \
             -f docker-compose.test.yml \
             down -v
+          sudo chown -R $(id -u):$(id -g) $GITHUB_WORKSPACE || true
 
   build-and-push:
     name: Build & Push Images
