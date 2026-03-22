@@ -1,0 +1,15 @@
+# docker-compose.override.yml
+# Auto-loaded for local development — adds volume mounts for hot-reload
+services:
+  backend:
+    volumes:
+      - ./backend/app:/app/app
+
+  worker:
+    volumes:
+      - ./backend/app:/app/app
+
+  frontend:
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
