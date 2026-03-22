@@ -105,6 +105,13 @@ jobs:
         with:
           python-version: "3.11"
 
+      - name: Clean up stale test containers
+        run: |
+          docker compose --env-file .env.test \
+            -f docker-compose.yml \
+            -f docker-compose.test.yml \
+            down -v 2>/dev/null || true
+
       - name: Start test stack
         run: |
           docker compose --env-file .env.test \
