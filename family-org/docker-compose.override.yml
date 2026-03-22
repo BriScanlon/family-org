@@ -10,6 +10,8 @@ services:
       - ./backend/app:/app/app
 
   frontend:
+    ports:
+      - "${FRONTEND_PORT}:5173"
     volumes:
       - ./frontend:/app
       - /app/node_modules

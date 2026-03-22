@@ -1,6 +1,10 @@
 # docker-compose.test.yml
 # Test overrides — disables cloudflared, uses .env.test ports
 services:
+  frontend:
+    ports:
+      - "${FRONTEND_PORT}:5173"
+
   cloudflared:
     profiles:
       - disabled

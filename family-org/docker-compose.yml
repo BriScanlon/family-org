@@ -43,8 +43,6 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile.dev
-    ports:
-      - "${FRONTEND_PORT}:5173"
     environment:
       - VITE_API_URL=${PUBLIC_URL}/api
     depends_on:
