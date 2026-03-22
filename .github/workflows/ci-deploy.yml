@@ -242,6 +242,18 @@ jobs:
         run: |
           docker compose --env-file .env -f docker-compose.yml -f docker-compose.prod.yml pull
 
+      - name: Start database and wait for it
+        working-directory: /opt/family-org
+        run: |
+          docker compose --env-file .env -f docker-compose.yml -f docker-compose.prod.yml up -d db
+          for i in $(seq 1 30); do
+            if docker compose --env-file .env -f docker-compose.yml -f docker-compose.prod.yml exec db pg_isready -U ${POSTGRES_USER:-family_org} 2>/dev/null; then
+              echo "Database is ready"
+              break
+            fi
+            sleep 2
+          done
+
       - name: Run database migrations
         working-directory: /opt/family-org
         run: |
