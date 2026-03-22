@@ -10,6 +10,10 @@ concurrency:
   group: ${{ github.event_name == 'push' && 'deploy-production' || format('pr-{0}', github.event.pull_request.number) }}
   cancel-in-progress: true
 
+defaults:
+  run:
+    working-directory: family-org
+
 env:
   REGISTRY: ghcr.io
   BACKEND_IMAGE: ghcr.io/briscanlon/family-org-backend
@@ -27,10 +31,10 @@ jobs:
         with:
           node-version: "20"
           cache: "npm"
-          cache-dependency-path: frontend/package-lock.json
+          cache-dependency-path: family-org/frontend/package-lock.json
 
       - name: Frontend lint (ESLint)
-        working-directory: frontend
+        working-directory: family-org/frontend
         run: |
           npm ci
           npm run lint
@@ -41,7 +45,7 @@ jobs:
           python-version: "3.11"
 
       - name: Backend lint (Ruff)
-        working-directory: backend
+        working-directory: family-org/backend
         run: |
           pip install -r requirements-dev.txt
           ruff check .
@@ -66,10 +70,10 @@ jobs:
         with:
           node-version: "20"
           cache: "npm"
-          cache-dependency-path: frontend/package-lock.json
+          cache-dependency-path: family-org/frontend/package-lock.json
 
       - name: Frontend dependency audit
-        working-directory: frontend
+        working-directory: family-org/frontend
         run: |
           npm ci
           npm audit --audit-level=high
@@ -80,7 +84,7 @@ jobs:
           python-version: "3.11"
 
       - name: Backend dependency audit
-        working-directory: backend
+        working-directory: family-org/backend
         run: |
           pip install pip-audit
           pip-audit -r requirements.txt
@@ -152,8 +156,8 @@ jobs:
       - name: Build and push backend
         uses: docker/build-push-action@v6
         with:
-          context: ./backend
-          file: ./backend/Dockerfile.prod
+          context: ./family-org/backend
+          file: ./family-org/backend/Dockerfile.prod
           push: true
           tags: |
             ${{ env.BACKEND_IMAGE }}:${{ github.sha }}
@@ -164,8 +168,8 @@ jobs:
       - name: Build and push frontend
         uses: docker/build-push-action@v6
         with:
-          context: ./frontend
-          file: ./frontend/Dockerfile
+          context: ./family-org/frontend
+          file: ./family-org/frontend/Dockerfile
           push: true
           tags: |
             ${{ env.FRONTEND_IMAGE }}:${{ github.sha }}
