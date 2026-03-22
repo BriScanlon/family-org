@@ -1,0 +1,263 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.event_name == 'push' && 'deploy-production' || format('pr-{0}', github.event.pull_request.number) }}
+  cancel-in-progress: true
+
+env:
+  REGISTRY: ghcr.io
+  BACKEND_IMAGE: ghcr.io/briscanlon/family-org-backend
+  FRONTEND_IMAGE: ghcr.io/briscanlon/family-org-frontend
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: [self-hosted, linux, x64]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Frontend lint (ESLint)
+        working-directory: frontend
+        run: |
+          npm ci
+          npm run lint
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Backend lint (Ruff)
+        working-directory: backend
+        run: |
+          pip install -r requirements-dev.txt
+          ruff check .
+          ruff format --check .
+
+  security:
+    name: Security Scan
+    runs-on: [self-hosted, linux, x64]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Semgrep SAST
+        uses: semgrep/semgrep-action@v1
+        with:
+          config: >-
+            p/default
+            p/python
+            p/typescript
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Frontend dependency audit
+        working-directory: frontend
+        run: |
+          npm ci
+          npm audit --audit-level=high
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Backend dependency audit
+        working-directory: backend
+        run: |
+          pip install pip-audit
+          pip-audit -r requirements.txt
+
+  test:
+    name: E2E Tests
+    runs-on: [self-hosted, linux, x64]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Start test stack
+        run: |
+          docker compose --env-file .env.test \
+            -f docker-compose.yml \
+            -f docker-compose.test.yml \
+            up -d --build --wait
+        timeout-minutes: 5
+
+      - name: Wait for backend health
+        run: |
+          for i in $(seq 1 30); do
+            if curl -sf http://localhost:8091/health; then
+              echo "Backend is healthy"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "Backend failed to become healthy"
+          docker compose --env-file .env.test -f docker-compose.yml -f docker-compose.test.yml logs backend
+          exit 1
+
+      - name: Run E2E tests
+        env:
+          TEST_BACKEND_URL: http://localhost:8091
+          TEST_FRONTEND_URL: http://localhost:5181
+        run: |
+          pip install requests pytest
+          python -m pytest tests/test_e2e.py -v
+
+      - name: Tear down test stack
+        if: always()
+        run: |
+          docker compose --env-file .env.test \
+            -f docker-compose.yml \
+            -f docker-compose.test.yml \
+            down -v
+
+  build-and-push:
+    name: Build & Push Images
+    needs: [lint, security, test]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: [self-hosted, linux, x64]
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push backend
+        uses: docker/build-push-action@v6
+        with:
+          context: ./backend
+          file: ./backend/Dockerfile.prod
+          push: true
+          tags: |
+            ${{ env.BACKEND_IMAGE }}:${{ github.sha }}
+            ${{ env.BACKEND_IMAGE }}:latest
+          cache-from: type=registry,ref=${{ env.BACKEND_IMAGE }}:buildcache
+          cache-to: type=registry,ref=${{ env.BACKEND_IMAGE }}:buildcache,mode=max
+
+      - name: Build and push frontend
+        uses: docker/build-push-action@v6
+        with:
+          context: ./frontend
+          file: ./frontend/Dockerfile
+          push: true
+          tags: |
+            ${{ env.FRONTEND_IMAGE }}:${{ github.sha }}
+            ${{ env.FRONTEND_IMAGE }}:latest
+          build-args: |
+            VITE_API_URL=${{ vars.PUBLIC_URL }}/api
+          cache-from: type=registry,ref=${{ env.FRONTEND_IMAGE }}:buildcache
+          cache-to: type=registry,ref=${{ env.FRONTEND_IMAGE }}:buildcache,mode=max
+
+  deploy:
+    name: Deploy to Production
+    needs: [build-and-push]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: [self-hosted, linux, x64]
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Record current SHA for rollback
+        run: |
+          mkdir -p /opt/family-org
+          if docker inspect --format='{{index .Config.Labels "org.opencontainers.image.revision"}}' family-org-backend-1 2>/dev/null; then
+            docker inspect --format='{{index .Config.Labels "org.opencontainers.image.revision"}}' family-org-backend-1 > /opt/family-org/.last-good-sha
+          fi
+
+      - name: Copy compose files
+        run: |
+          cp docker-compose.yml /opt/family-org/
+          cp docker-compose.prod.yml /opt/family-org/
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Verify production .env exists
+        run: |
+          if [ ! -f /opt/family-org/.env ]; then
+            echo "ERROR: /opt/family-org/.env not found — cannot deploy without production config"
+            exit 1
+          fi
+
+      - name: Pull images
+        working-directory: /opt/family-org
+        run: |
+          docker compose --env-file .env -f docker-compose.yml -f docker-compose.prod.yml pull
+
+      - name: Run database migrations
+        working-directory: /opt/family-org
+        run: |
+          docker compose --env-file .env -f docker-compose.yml -f docker-compose.prod.yml run --rm backend alembic upgrade head
+
+      - name: Deploy
+        working-directory: /opt/family-org
+        run: |
+          docker compose --env-file .env -f docker-compose.yml -f docker-compose.prod.yml up -d
+
+      - name: Health check
+        run: |
+          sleep 10
+          for i in $(seq 1 15); do
+            BACKEND_OK=false
+            FRONTEND_OK=false
+            if curl -sf http://localhost:${BACKEND_PORT:-8090}/health; then
+              BACKEND_OK=true
+            fi
+            if curl -sf http://localhost:${FRONTEND_PORT:-5180}/; then
+              FRONTEND_OK=true
+            fi
+            if [ "$BACKEND_OK" = true ] && [ "$FRONTEND_OK" = true ]; then
+              echo "Deployment healthy (backend + frontend)"
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "Health check failed — initiating rollback"
+          exit 1
+
+      - name: Rollback on failure
+        if: failure()
+        working-directory: /opt/family-org
+        run: |
+          if [ -f .last-good-sha ]; then
+            PREV_SHA=$(cat .last-good-sha)
+            echo "Rolling back to $PREV_SHA"
+            docker pull ${{ env.BACKEND_IMAGE }}:$PREV_SHA
+            docker pull ${{ env.FRONTEND_IMAGE }}:$PREV_SHA
+            docker tag ${{ env.BACKEND_IMAGE }}:$PREV_SHA ${{ env.BACKEND_IMAGE }}:latest
+            docker tag ${{ env.FRONTEND_IMAGE }}:$PREV_SHA ${{ env.FRONTEND_IMAGE }}:latest
+            docker compose --env-file .env -f docker-compose.yml -f docker-compose.prod.yml up -d
+          else
+            echo "No previous SHA found — cannot rollback (first deploy?)"
+          fi
