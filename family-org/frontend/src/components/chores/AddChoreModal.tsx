@@ -17,6 +17,7 @@ export function AddChoreModal({ open, onClose, onSubmit, chore }: AddChoreModalP
   const [points, setPoints] = useState(chore?.points || 0)
   const [rewardMoney, setRewardMoney] = useState(chore?.reward_money || 0)
 
+  // Sync form state when chore prop changes (edit vs add mode)
   useEffect(() => {
     if (chore) {
       setTitle(chore.title)

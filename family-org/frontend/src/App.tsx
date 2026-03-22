@@ -32,22 +32,6 @@ function App() {
   const [activeTab, setActiveTab] = useState<'dashboard' | 'calendar' | 'chores' | 'rewards' | 'settings'>('dashboard')
   const ws = useRef<WebSocket | null>(null)
 
-  useEffect(() => {
-    fetch('/api/auth/me')
-      .then(res => {
-        if (res.ok) return res.json()
-        throw new Error('Not logged in')
-      })
-      .then(userData => {
-        setUser(userData)
-        fetchData()
-        setupWebSocket()
-      })
-      .catch(() => {
-        setLoading(false)
-      })
-  }, [])
-
   const fetchData = () => {
     Promise.all([
       fetch('/api/auth/me').then(res => res.json()),
@@ -78,6 +62,22 @@ function App() {
     ws.current.onmessage = () => { fetchData() }
     return () => { if (ws.current) ws.current.close() }
   }
+
+  useEffect(() => {
+    fetch('/api/auth/me')
+      .then(res => {
+        if (res.ok) return res.json()
+        throw new Error('Not logged in')
+      })
+      .then(userData => {
+        setUser(userData)
+        fetchData()
+        setupWebSocket()
+      })
+      .catch(() => {
+        setLoading(false)
+      })
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleCompleteChore = (choreId: number) => {
     if (!user) return
