@@ -1,0 +1,48 @@
+# docker-compose.prod.yml
+# Production overrides — use with: docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+services:
+  backend:
+    image: ghcr.io/briscanlon/family-org-backend:latest
+    volumes: []
+    restart: unless-stopped
+    environment:
+      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+      - RABBITMQ_URL=amqp://${RABBITMQ_USER}:${RABBITMQ_PASSWORD}@rabbitmq:5672/
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
+      - GOOGLE_REDIRECT_URI=${PUBLIC_URL}/api/auth/callback
+      - FRONTEND_URL=${PUBLIC_URL}
+      - OLLAMA_HOST=${OLLAMA_HOST}
+      - OLLAMA_MODEL=${OLLAMA_MODEL}
+
+  worker:
+    image: ghcr.io/briscanlon/family-org-backend:latest
+    volumes: []
+    restart: unless-stopped
+    environment:
+      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+      - RABBITMQ_URL=amqp://${RABBITMQ_USER}:${RABBITMQ_PASSWORD}@rabbitmq:5672/
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
+      - GOOGLE_REDIRECT_URI=${PUBLIC_URL}/api/auth/callback
+      - OLLAMA_HOST=${OLLAMA_HOST}
+      - OLLAMA_MODEL=${OLLAMA_MODEL}
+
+  frontend:
+    image: ghcr.io/briscanlon/family-org-frontend:latest
+    volumes: []
+    restart: unless-stopped
+
+  rabbitmq:
+    ports: []
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD}
+    restart: unless-stopped
+
+  db:
+    ports: []
+    restart: unless-stopped
+
+  cloudflared:
+    restart: always
