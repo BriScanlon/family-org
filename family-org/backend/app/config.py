@@ -1,5 +1,7 @@
 import os
+
 from pydantic_settings import BaseSettings
+
 
 class Settings(BaseSettings):
     DATABASE_URL: str = os.getenv("DATABASE_URL", "postgresql://user:password@db:5432/family_org")
@@ -12,9 +14,10 @@ class Settings(BaseSettings):
     OLLAMA_HOST: str = os.getenv("OLLAMA_HOST", "http://host.docker.internal:11434")
     OLLAMA_MODEL: str = os.getenv("OLLAMA_MODEL", "deepseek-r1:latest")
     ALGORITHM: str = "HS256"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 # 1 day
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24  # 1 day
 
     class Config:
         env_file = ".env"
+
 
 settings = Settings()

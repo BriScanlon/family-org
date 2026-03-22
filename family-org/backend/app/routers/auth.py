@@ -1,14 +1,13 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Request
+import base64
+import hashlib
+import secrets
+
+from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import RedirectResponse
-from sqlalchemy.orm import Session
+from google.auth.transport import requests
 from google.oauth2 import id_token
 from google_auth_oauthlib.flow import Flow
-from google.auth.transport import requests
-import json
-import os
-import hashlib
-import base64
-import secrets
+from sqlalchemy.orm import Session
 
 
 def _generate_pkce():
@@ -18,9 +17,10 @@ def _generate_pkce():
     code_challenge = base64.urlsafe_b64encode(digest).rstrip(b"=").decode("ascii")
     return code_verifier, code_challenge
 
+
+from ..config import settings
 from ..database import get_db
 from ..models import User
-from ..config import settings
 from ..services.auth_service import create_access_token
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -37,7 +37,7 @@ CLIENT_CONFIG = {
         "token_uri": "https://oauth2.googleapis.com/token",
         "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
         "client_secret": settings.GOOGLE_CLIENT_SECRET,
-        "redirect_uris": [settings.GOOGLE_REDIRECT_URI]
+        "redirect_uris": [settings.GOOGLE_REDIRECT_URI],
     }
 }
 
@@ -46,45 +46,37 @@ SCOPES = [
     "https://www.googleapis.com/auth/userinfo.email",
     "https://www.googleapis.com/auth/userinfo.profile",
     "https://www.googleapis.com/auth/calendar.readonly",
-    "https://www.googleapis.com/auth/tasks"
+    "https://www.googleapis.com/auth/tasks",
 ]
+
 
 @router.get("/login")
 def login():
-    flow = Flow.from_client_config(
-        CLIENT_CONFIG,
-        scopes=SCOPES,
-        redirect_uri=settings.GOOGLE_REDIRECT_URI
-    )
+    flow = Flow.from_client_config(CLIENT_CONFIG, scopes=SCOPES, redirect_uri=settings.GOOGLE_REDIRECT_URI)
     code_verifier, code_challenge = _generate_pkce()
     authorization_url, state = flow.authorization_url(
         access_type="offline",
         include_granted_scopes="true",
         code_challenge=code_challenge,
-        code_challenge_method="S256"
+        code_challenge_method="S256",
     )
     # Store code_verifier keyed by state so callback can retrieve it
     _pending_states[state] = code_verifier
     return RedirectResponse(authorization_url)
+
 
 @router.get("/callback")
 async def callback(code: str, state: str, db: Session = Depends(get_db)):
     code_verifier = _pending_states.pop(state, None)
     if not code_verifier:
         raise HTTPException(status_code=400, detail="Invalid or expired OAuth state")
-    flow = Flow.from_client_config(
-        CLIENT_CONFIG,
-        scopes=SCOPES,
-        redirect_uri=settings.GOOGLE_REDIRECT_URI
-    )
+    flow = Flow.from_client_config(CLIENT_CONFIG, scopes=SCOPES, redirect_uri=settings.GOOGLE_REDIRECT_URI)
     flow.fetch_token(code=code, code_verifier=code_verifier)
     credentials = flow.credentials
 
     # Verify the ID token
     try:
-        id_info = id_token.verify_oauth2_token(
-            credentials.id_token, requests.Request(), settings.GOOGLE_CLIENT_ID
-        )
+        id_info = id_token.verify_oauth2_token(credentials.id_token, requests.Request(), settings.GOOGLE_CLIENT_ID)
     except ValueError:
         raise HTTPException(status_code=400, detail="Invalid token")
 
@@ -108,44 +100,48 @@ async def callback(code: str, state: str, db: Session = Depends(get_db)):
                 email=email,
                 name=name,
                 google_access_token=credentials.token,
-                google_refresh_token=credentials.refresh_token
+                google_refresh_token=credentials.refresh_token,
             )
             db.add(user)
     else:
         user.google_access_token = credentials.token
         if credentials.refresh_token:
             user.google_refresh_token = credentials.refresh_token
-    
+
     db.commit()
     db.refresh(user)
 
     # Trigger sync in background
-    from ..services.rabbitmq import send_sync_message
     import asyncio
+
+    from ..services.rabbitmq import send_sync_message
+
     asyncio.create_task(send_sync_message("calendar_sync", {"user_id": user.id}))
     asyncio.create_task(send_sync_message("tasks_sync", {"user_id": user.id}))
 
     # Create JWT for our application
     access_token = create_access_token(data={"sub": user.email, "id": user.id})
-    
+
     # Redirect to frontend with the token (in a real app, maybe a cookie or a fragment)
     # For now, let's just send it as a query param or redirect back to the home page.
     response = RedirectResponse(url=settings.FRONTEND_URL)
     response.set_cookie(key="access_token", value=access_token, httponly=True)
     return response
 
+
 @router.get("/me")
 async def get_me(request: Request, db: Session = Depends(get_db)):
     token = request.cookies.get("access_token")
     if not token:
         raise HTTPException(status_code=401, detail="Not authenticated")
-    
+
     # Simple token verification logic
     from ..services.auth_service import verify_token
+
     payload = verify_token(token)
     if not payload:
         raise HTTPException(status_code=401, detail="Invalid token")
-    
+
     user = db.query(User).filter(User.email == payload.get("sub")).first()
     if not user:
         raise HTTPException(status_code=401, detail="User not found")

@@ -1,20 +1,23 @@
-from fastapi import APIRouter, Depends, HTTPException, Request
-from sqlalchemy.orm import Session
+from fastapi import APIRouter, Depends, HTTPException
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
+from sqlalchemy.orm import Session
+
+from ..config import settings
 from ..database import get_db
 from ..models import User
-from ..schemas import PreferencesUpdate, Go4SchoolsConnect, GarminConnect
+from ..schemas import GarminConnect, Go4SchoolsConnect, PreferencesUpdate
 from ..services.encryption import encrypt
 from ..services.rabbitmq import send_sync_message
-from ..config import settings
 from .auth import get_me
 
 router = APIRouter(prefix="/settings", tags=["settings"])
 
+
 @router.get("/preferences")
 def get_preferences(current_user: User = Depends(get_me)):
     return current_user.preferences or {}
+
 
 @router.patch("/preferences")
 def update_preferences(prefs: PreferencesUpdate, db: Session = Depends(get_db), current_user: User = Depends(get_me)):
@@ -26,6 +29,7 @@ def update_preferences(prefs: PreferencesUpdate, db: Session = Depends(get_db), 
     db.refresh(current_user)
     return current_user.preferences
 
+
 @router.get("/calendars")
 async def list_google_calendars(current_user: User = Depends(get_me)):
     if not current_user.google_access_token:
@@ -36,29 +40,33 @@ async def list_google_calendars(current_user: User = Depends(get_me)):
         refresh_token=current_user.google_refresh_token,
         token_uri="https://oauth2.googleapis.com/token",
         client_id=settings.GOOGLE_CLIENT_ID,
-        client_secret=settings.GOOGLE_CLIENT_SECRET
+        client_secret=settings.GOOGLE_CLIENT_SECRET,
     )
 
     try:
-        service = build('calendar', 'v3', credentials=creds)
+        service = build("calendar", "v3", credentials=creds)
         calendar_list = service.calendarList().list().execute()
-        return calendar_list.get('items', [])
+        return calendar_list.get("items", [])
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+
 @router.post("/calendars/sync")
-async def update_synced_calendars(calendar_ids: list[str], db: Session = Depends(get_db), current_user: User = Depends(get_me)):
+async def update_synced_calendars(
+    calendar_ids: list[str], db: Session = Depends(get_db), current_user: User = Depends(get_me)
+):
     # In this dev version, we check if the user is a parent (or just allow for now)
     # current_user.role = "parent" # Manual override for testing if needed
-    
+
     current_user.synced_calendars = calendar_ids
     db.add(current_user)
     db.commit()
-    
+
     # Trigger an immediate sync for the new calendars
     await send_sync_message("calendar_sync", {"user_id": current_user.id})
-    
+
     return {"status": "success", "synced_calendars": current_user.synced_calendars}
+
 
 @router.post("/role/parent")
 async def become_parent(db: Session = Depends(get_db), current_user: User = Depends(get_me)):
@@ -70,7 +78,9 @@ async def become_parent(db: Session = Depends(get_db), current_user: User = Depe
 
 
 @router.post("/go4schools")
-async def connect_go4schools(creds: Go4SchoolsConnect, db: Session = Depends(get_db), current_user: User = Depends(get_me)):
+async def connect_go4schools(
+    creds: Go4SchoolsConnect, db: Session = Depends(get_db), current_user: User = Depends(get_me)
+):
     current_user.go4schools_email = creds.email
     current_user.go4schools_password = encrypt(creds.password)
     # Clear any previous error
@@ -134,6 +144,7 @@ async def connect_garmin(creds: GarminConnect, db: Session = Depends(get_db), cu
 @router.delete("/garmin")
 def disconnect_garmin(db: Session = Depends(get_db), current_user: User = Depends(get_me)):
     from ..models import GarminActivity
+
     current_user.garmin_email = None
     current_user.garmin_password = None
     prefs = dict(current_user.preferences or {})

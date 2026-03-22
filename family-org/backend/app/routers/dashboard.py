@@ -1,14 +1,15 @@
 import html as _html_mod
+import json
 import re
 from datetime import datetime
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Depends, HTTPException
+
+from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect
 from fastapi.responses import HTMLResponse
 from sqlalchemy.orm import Session
-from typing import List
-import json
+
 from ..database import get_db
+from ..models import Alert, Chore, ChoreCompletion, Event, GarminActivity, Roster, RosterAssignment, User
 from ..services.ai_agent import FamilyAIAgent
-from ..models import User, Event, Alert, Chore, Roster, RosterAssignment, ChoreCompletion, GarminActivity
 from .auth import get_me
 
 
@@ -19,7 +20,7 @@ def _esc(s: str) -> str:
 
 def _safe_color(raw: str, default: str = "#6366f1") -> str:
     """Validate color is a hex code to prevent CSS injection."""
-    if raw and re.match(r'^#[0-9a-fA-F]{3,8}$', raw):
+    if raw and re.match(r"^#[0-9a-fA-F]{3,8}$", raw):
         return raw
     return default
 
@@ -57,14 +58,11 @@ def _build_freq_card(card_id: str, name: str, color: str, done: int, total: int,
                         f'<div class="chore-row{done_class}">'
                         f'<span class="chore-icon{" chore-icon-done" if cr["done"] else ""}">{icon}</span>'
                         f'<span class="chore-title">{_esc(cr["title"])}</span>'
-                        f'</div>'
+                        f"</div>"
                     )
                     item_count += 1
                 panel_content += (
-                    f'<div class="roster-group">'
-                    f'<div class="roster-label">{_esc(r["name"])}</div>'
-                    f'{chore_rows}'
-                    f'</div>'
+                    f'<div class="roster-group"><div class="roster-label">{_esc(r["name"])}</div>{chore_rows}</div>'
                 )
         else:
             for cr in rosters:
@@ -74,7 +72,7 @@ def _build_freq_card(card_id: str, name: str, color: str, done: int, total: int,
                     f'<div class="chore-row{done_class}">'
                     f'<span class="chore-icon{" chore-icon-done" if cr["done"] else ""}">{icon}</span>'
                     f'<span class="chore-title">{_esc(cr["title"])}</span>'
-                    f'</div>'
+                    f"</div>"
                 )
                 item_count += 1
 
@@ -83,10 +81,10 @@ def _build_freq_card(card_id: str, name: str, color: str, done: int, total: int,
             panel_content = (
                 f'<div class="ticker-wrap">'
                 f'<div class="ticker-content" style="animation:ticker-scroll {scroll_duration}s linear infinite;">'
-                f'{panel_content}'
-                f'{panel_content}'
-                f'</div>'
-                f'</div>'
+                f"{panel_content}"
+                f"{panel_content}"
+                f"</div>"
+                f"</div>"
             )
 
         label = FREQ_LABELS[freq]
@@ -95,15 +93,15 @@ def _build_freq_card(card_id: str, name: str, color: str, done: int, total: int,
             f'<div class="child-header" style="border-top-color:{safe_color};">'
             f'<span class="child-name">{_esc(name)}</span>'
             f'<span class="child-count">{done}/{total}</span>'
-            f'</div>'
+            f"</div>"
             f'<div class="child-body">'
             f'<div class="progress-track">'
             f'<div class="progress-fill" style="background:{safe_color};width:{pct}%;"></div>'
-            f'</div>'
+            f"</div>"
             f'<div class="freq-tab-bar"><span class="freq-pill" style="background:#475569;color:#f8fafc;">{label}</span></div>'
-            f'{panel_content}'
-            f'</div>'
-            f'</div>'
+            f"{panel_content}"
+            f"</div>"
+            f"</div>"
         )
 
     tab_duration = 10  # seconds per tab
@@ -112,11 +110,7 @@ def _build_freq_card(card_id: str, name: str, color: str, done: int, total: int,
     # Tab bar pills
     tab_pills = ""
     for i, freq in enumerate(active_freqs):
-        tab_pills += (
-            f'<span class="freq-pill freq-pill-{card_id}-{i}">'
-            f'{FREQ_LABELS[freq]}'
-            f'</span>'
-        )
+        tab_pills += f'<span class="freq-pill freq-pill-{card_id}-{i}">{FREQ_LABELS[freq]}</span>'
 
     # Tab panels
     panels_html = ""
@@ -136,14 +130,11 @@ def _build_freq_card(card_id: str, name: str, color: str, done: int, total: int,
                         f'<div class="chore-row{done_class}">'
                         f'<span class="chore-icon{" chore-icon-done" if cr["done"] else ""}">{icon}</span>'
                         f'<span class="chore-title">{_esc(cr["title"])}</span>'
-                        f'</div>'
+                        f"</div>"
                     )
                     item_count += 1
                 panel_content += (
-                    f'<div class="roster-group">'
-                    f'<div class="roster-label">{_esc(r["name"])}</div>'
-                    f'{chore_rows}'
-                    f'</div>'
+                    f'<div class="roster-group"><div class="roster-label">{_esc(r["name"])}</div>{chore_rows}</div>'
                 )
         else:
             # Flat list format (family tasks)
@@ -154,7 +145,7 @@ def _build_freq_card(card_id: str, name: str, color: str, done: int, total: int,
                     f'<div class="chore-row{done_class}">'
                     f'<span class="chore-icon{" chore-icon-done" if cr["done"] else ""}">{icon}</span>'
                     f'<span class="chore-title">{_esc(cr["title"])}</span>'
-                    f'</div>'
+                    f"</div>"
                 )
                 item_count += 1
 
@@ -164,17 +155,13 @@ def _build_freq_card(card_id: str, name: str, color: str, done: int, total: int,
             panel_content = (
                 f'<div class="ticker-wrap">'
                 f'<div class="ticker-content" style="animation:ticker-scroll {scroll_duration}s linear infinite;">'
-                f'{panel_content}'
-                f'{panel_content}'
-                f'</div>'
-                f'</div>'
+                f"{panel_content}"
+                f"{panel_content}"
+                f"</div>"
+                f"</div>"
             )
 
-        panels_html += (
-            f'<div class="freq-panel freq-panel-{card_id}-{i}">'
-            f'{panel_content}'
-            f'</div>'
-        )
+        panels_html += f'<div class="freq-panel freq-panel-{card_id}-{i}">{panel_content}</div>'
 
     # Per-card keyframes for tab rotation
     card_keyframes = ""
@@ -182,49 +169,49 @@ def _build_freq_card(card_id: str, name: str, color: str, done: int, total: int,
         show_start = (i * tab_duration / cycle) * 100
         show_end = ((i + 1) * tab_duration / cycle) * 100
         card_keyframes += (
-            f'@keyframes show-{card_id}-{i}{{'
-            f'0%{{opacity:0;height:0;overflow:hidden;}}'
-            f'{show_start:.1f}%{{opacity:0;height:0;overflow:hidden;}}'
-            f'{show_start + 0.5:.1f}%{{opacity:1;height:auto;overflow:visible;}}'
-            f'{show_end - 0.5:.1f}%{{opacity:1;height:auto;overflow:visible;}}'
-            f'{show_end:.1f}%{{opacity:0;height:0;overflow:hidden;}}'
-            f'100%{{opacity:0;height:0;overflow:hidden;}}'
-            f'}}'
+            f"@keyframes show-{card_id}-{i}{{"
+            f"0%{{opacity:0;height:0;overflow:hidden;}}"
+            f"{show_start:.1f}%{{opacity:0;height:0;overflow:hidden;}}"
+            f"{show_start + 0.5:.1f}%{{opacity:1;height:auto;overflow:visible;}}"
+            f"{show_end - 0.5:.1f}%{{opacity:1;height:auto;overflow:visible;}}"
+            f"{show_end:.1f}%{{opacity:0;height:0;overflow:hidden;}}"
+            f"100%{{opacity:0;height:0;overflow:hidden;}}"
+            f"}}"
         )
         card_keyframes += (
-            f'@keyframes pill-{card_id}-{i}{{'
-            f'0%{{background:#334155;color:#94a3b8;}}'
-            f'{show_start:.1f}%{{background:#334155;color:#94a3b8;}}'
-            f'{show_start + 0.5:.1f}%{{background:#475569;color:#f8fafc;}}'
-            f'{show_end - 0.5:.1f}%{{background:#475569;color:#f8fafc;}}'
-            f'{show_end:.1f}%{{background:#334155;color:#94a3b8;}}'
-            f'100%{{background:#334155;color:#94a3b8;}}'
-            f'}}'
+            f"@keyframes pill-{card_id}-{i}{{"
+            f"0%{{background:#334155;color:#94a3b8;}}"
+            f"{show_start:.1f}%{{background:#334155;color:#94a3b8;}}"
+            f"{show_start + 0.5:.1f}%{{background:#475569;color:#f8fafc;}}"
+            f"{show_end - 0.5:.1f}%{{background:#475569;color:#f8fafc;}}"
+            f"{show_end:.1f}%{{background:#334155;color:#94a3b8;}}"
+            f"100%{{background:#334155;color:#94a3b8;}}"
+            f"}}"
         )
 
     # Per-card style block with staggered delays
-    style_rules = f'<style>{card_keyframes}'
+    style_rules = f"<style>{card_keyframes}"
     delay = int(card_id.replace("child", "").replace("family", "99") or "0") * 3
     for i in range(num_tabs):
-        style_rules += f'.freq-panel-{card_id}-{i}{{animation:show-{card_id}-{i} {cycle}s {delay}s infinite;}}'
-        style_rules += f'.freq-pill-{card_id}-{i}{{animation:pill-{card_id}-{i} {cycle}s {delay}s infinite;}}'
-    style_rules += '</style>'
+        style_rules += f".freq-panel-{card_id}-{i}{{animation:show-{card_id}-{i} {cycle}s {delay}s infinite;}}"
+        style_rules += f".freq-pill-{card_id}-{i}{{animation:pill-{card_id}-{i} {cycle}s {delay}s infinite;}}"
+    style_rules += "</style>"
 
     return (
-        f'{style_rules}'
+        f"{style_rules}"
         f'<div class="card child-card">'
         f'<div class="child-header" style="border-top-color:{safe_color};">'
         f'<span class="child-name">{_esc(name)}</span>'
         f'<span class="child-count">{done}/{total}</span>'
-        f'</div>'
+        f"</div>"
         f'<div class="child-body">'
         f'<div class="progress-track">'
         f'<div class="progress-fill" style="background:{safe_color};width:{pct}%;"></div>'
-        f'</div>'
+        f"</div>"
         f'<div class="freq-tab-bar">{tab_pills}</div>'
-        f'{panels_html}'
-        f'</div>'
-        f'</div>'
+        f"{panels_html}"
+        f"</div>"
+        f"</div>"
     )
 
 
@@ -244,32 +231,35 @@ def _build_league_table(db: Session) -> list:
 
     league = []
     for user in users:
-        standard_completed = db.query(Chore).filter(
-            Chore.assignee_id == user.id,
-            Chore.is_bonus == False,
-            Chore.is_completed == True
-        ).count()
+        standard_completed = (
+            db.query(Chore)
+            .filter(Chore.assignee_id == user.id, Chore.is_bonus == False, Chore.is_completed == True)
+            .count()
+        )
 
-        bonus_completed = db.query(Chore).filter(
-            Chore.assignee_id == user.id,
-            Chore.is_bonus == True,
-            Chore.is_completed == True
-        ).count()
+        bonus_completed = (
+            db.query(Chore)
+            .filter(Chore.assignee_id == user.id, Chore.is_bonus == True, Chore.is_completed == True)
+            .count()
+        )
 
-        monthly_completions = db.query(ChoreCompletion).filter(
-            ChoreCompletion.user_id == user.id,
-            ChoreCompletion.completed_at >= month_start
-        ).count()
+        monthly_completions = (
+            db.query(ChoreCompletion)
+            .filter(ChoreCompletion.user_id == user.id, ChoreCompletion.completed_at >= month_start)
+            .count()
+        )
 
-        league.append({
-            "user_id": user.id,
-            "name": user.name,
-            "standard_completed": standard_completed,
-            "bonus_completed": bonus_completed,
-            "total_points": user.points,
-            "total_balance": user.balance,
-            "monthly_completions": monthly_completions,
-        })
+        league.append(
+            {
+                "user_id": user.id,
+                "name": user.name,
+                "standard_completed": standard_completed,
+                "bonus_completed": bonus_completed,
+                "total_points": user.points,
+                "total_balance": user.balance,
+                "monthly_completions": monthly_completions,
+            }
+        )
 
     # Sort by points, then monthly completions as tiebreaker
     league.sort(key=lambda x: (x["total_points"], x["monthly_completions"]), reverse=True)
@@ -278,36 +268,42 @@ def _build_league_table(db: Session) -> list:
 
 router = APIRouter(prefix="/dashboard", tags=["dashboard"])
 
+
 @router.get("/league-table")
 def get_league_table(db: Session = Depends(get_db)):
     return _build_league_table(db)
 
+
 @router.get("/events")
 def get_family_events(db: Session = Depends(get_db)):
     now_iso = datetime.now().isoformat()
-    events = db.query(Event).filter(
-        Event.start_time >= now_iso
-    ).order_by(Event.start_time).all()
+    events = db.query(Event).filter(Event.start_time >= now_iso).order_by(Event.start_time).all()
     # Join with user to get names
     results = []
     for event in events:
         user = db.query(User).filter(User.id == event.user_id).first()
-        results.append({
-            "id": event.id,
-            "summary": event.summary,
-            "start_time": event.start_time,
-            "end_time": event.end_time,
-            "location": event.location,
-            "user_name": user.name if user else "Unknown"
-        })
+        results.append(
+            {
+                "id": event.id,
+                "summary": event.summary,
+                "start_time": event.start_time,
+                "end_time": event.end_time,
+                "location": event.location,
+                "user_name": user.name if user else "Unknown",
+            }
+        )
     return results
+
 
 @router.get("/alerts")
 def get_active_alerts(db: Session = Depends(get_db), current_user: User = Depends(get_me)):
-    return db.query(Alert).filter(
-        Alert.user_id == current_user.id,
-        Alert.is_dismissed == False
-    ).order_by(Alert.created_at.desc()).all()
+    return (
+        db.query(Alert)
+        .filter(Alert.user_id == current_user.id, Alert.is_dismissed == False)
+        .order_by(Alert.created_at.desc())
+        .all()
+    )
+
 
 @router.post("/alerts/{alert_id}/feedback")
 def submit_alert_feedback(alert_id: int, feedback: int, db: Session = Depends(get_db)):
@@ -320,6 +316,7 @@ def submit_alert_feedback(alert_id: int, feedback: int, db: Session = Depends(ge
         db.commit()
     return {"status": "success"}
 
+
 @router.post("/alerts/{alert_id}/dismiss")
 def dismiss_alert(alert_id: int, db: Session = Depends(get_db)):
     alert = db.query(Alert).filter(Alert.id == alert_id).first()
@@ -327,6 +324,7 @@ def dismiss_alert(alert_id: int, db: Session = Depends(get_db)):
         alert.is_dismissed = True
         db.commit()
     return {"status": "success"}
+
 
 @router.get("/ai-analysis/{user_id}")
 def get_ai_analysis(user_id: int, db: Session = Depends(get_db)):
@@ -339,10 +337,14 @@ def get_ai_analysis(user_id: int, db: Session = Depends(get_db)):
 def get_activities(db: Session = Depends(get_db)):
     """Get last 7 days of Garmin activities grouped by user."""
     from datetime import timedelta
+
     cutoff = datetime.now() - timedelta(days=7)
-    activities = db.query(GarminActivity).filter(
-        GarminActivity.start_time >= cutoff
-    ).order_by(GarminActivity.start_time.desc()).all()
+    activities = (
+        db.query(GarminActivity)
+        .filter(GarminActivity.start_time >= cutoff)
+        .order_by(GarminActivity.start_time.desc())
+        .all()
+    )
 
     grouped = {}
     for act in activities:
@@ -355,16 +357,18 @@ def get_activities(db: Session = Depends(get_db)):
                 "color": (user.preferences or {}).get("color", "#6366f1") if user else "#6366f1",
                 "activities": [],
             }
-        grouped[uid]["activities"].append({
-            "id": act.id,
-            "activity_type": act.activity_type,
-            "name": act.name,
-            "start_time": act.start_time.isoformat() if act.start_time else None,
-            "duration_seconds": act.duration_seconds,
-            "distance_meters": act.distance_meters,
-            "calories": act.calories,
-            "average_hr": act.average_hr,
-        })
+        grouped[uid]["activities"].append(
+            {
+                "id": act.id,
+                "activity_type": act.activity_type,
+                "name": act.name,
+                "start_time": act.start_time.isoformat() if act.start_time else None,
+                "duration_seconds": act.duration_seconds,
+                "distance_meters": act.distance_meters,
+                "calories": act.calories,
+                "average_hr": act.average_hr,
+            }
+        )
 
     return list(grouped.values())
 
@@ -394,11 +398,15 @@ def kiosk_dashboard(db: Session = Depends(get_db)):
                 continue
             chores = db.query(Chore).filter(Chore.roster_id == roster.id).all()
             for c in chores:
-                comp = db.query(ChoreCompletion).filter(
-                    ChoreCompletion.chore_id == c.id,
-                    ChoreCompletion.user_id == child.id,
-                    ChoreCompletion.completed_at >= today_start
-                ).first()
+                comp = (
+                    db.query(ChoreCompletion)
+                    .filter(
+                        ChoreCompletion.chore_id == c.id,
+                        ChoreCompletion.user_id == child.id,
+                        ChoreCompletion.completed_at >= today_start,
+                    )
+                    .first()
+                )
                 is_done = comp is not None
                 if is_done:
                     child_done += 1
@@ -408,17 +416,25 @@ def kiosk_dashboard(db: Session = Depends(get_db)):
                     freq_rosters[freq][roster.name] = []
                 freq_rosters[freq][roster.name].append({"title": c.title, "done": is_done})
         # Non-roster chores assigned directly to this child
-        direct_chores = db.query(Chore).filter(
-            Chore.assignee_id == child.id,
-            Chore.roster_id == None,
-            Chore.is_completed == False,
-        ).all()
+        direct_chores = (
+            db.query(Chore)
+            .filter(
+                Chore.assignee_id == child.id,
+                Chore.roster_id == None,
+                Chore.is_completed == False,
+            )
+            .all()
+        )
         for c in direct_chores:
-            comp = db.query(ChoreCompletion).filter(
-                ChoreCompletion.chore_id == c.id,
-                ChoreCompletion.user_id == child.id,
-                ChoreCompletion.completed_at >= today_start
-            ).first()
+            comp = (
+                db.query(ChoreCompletion)
+                .filter(
+                    ChoreCompletion.chore_id == c.id,
+                    ChoreCompletion.user_id == child.id,
+                    ChoreCompletion.completed_at >= today_start,
+                )
+                .first()
+            )
             is_done = comp is not None
             if is_done:
                 child_done += 1
@@ -435,28 +451,35 @@ def kiosk_dashboard(db: Session = Depends(get_db)):
         total_chores += child_total
         total_done += child_done
         color = (child.preferences or {}).get("color", "#6366f1")
-        children_data.append({
-            "name": child.name,
-            "color": color,
-            "done": child_done,
-            "total": child_total,
-            "freq_data": freq_data,
-        })
+        children_data.append(
+            {
+                "name": child.name,
+                "color": color,
+                "done": child_done,
+                "total": child_total,
+                "freq_data": freq_data,
+            }
+        )
 
     # --- Unassigned family tasks (non-roster, no assignee) ---
-    family_tasks = db.query(Chore).filter(
-        Chore.assignee_id == None,
-        Chore.roster_id == None,
-        Chore.is_completed == False,
-    ).all()
+    family_tasks = (
+        db.query(Chore)
+        .filter(
+            Chore.assignee_id == None,
+            Chore.roster_id == None,
+            Chore.is_completed == False,
+        )
+        .all()
+    )
     family_freq_data = {"daily": [], "weekly": [], "monthly": []}
     family_done_count = 0
     family_total_count = 0
     for c in family_tasks:
-        comp = db.query(ChoreCompletion).filter(
-            ChoreCompletion.chore_id == c.id,
-            ChoreCompletion.completed_at >= today_start
-        ).first()
+        comp = (
+            db.query(ChoreCompletion)
+            .filter(ChoreCompletion.chore_id == c.id, ChoreCompletion.completed_at >= today_start)
+            .first()
+        )
         is_done = comp is not None
         if is_done:
             family_done_count += 1
@@ -467,16 +490,22 @@ def kiosk_dashboard(db: Session = Depends(get_db)):
     family_freq_data = {k: v for k, v in family_freq_data.items() if v}
 
     # --- Bonus chores ---
-    bonus_chores = db.query(Chore).filter(
-        Chore.is_bonus == True,
-        Chore.is_completed == False,
-    ).all()
+    bonus_chores = (
+        db.query(Chore)
+        .filter(
+            Chore.is_bonus == True,
+            Chore.is_completed == False,
+        )
+        .all()
+    )
     bonus_items = []
     for c in bonus_chores:
-        bonus_items.append({
-            "title": c.title,
-            "reward": c.reward_money or 0.0,
-        })
+        bonus_items.append(
+            {
+                "title": c.title,
+                "reward": c.reward_money or 0.0,
+            }
+        )
 
     # --- League table ---
     league = _build_league_table(db)
@@ -487,10 +516,9 @@ def kiosk_dashboard(db: Session = Depends(get_db)):
 
     # --- Events today count ---
     today_end_str = today_str + "T23:59:59"
-    events_today_count = db.query(Event).filter(
-        Event.start_time >= today_str,
-        Event.start_time <= today_end_str
-    ).count()
+    events_today_count = (
+        db.query(Event).filter(Event.start_time >= today_str, Event.start_time <= today_end_str).count()
+    )
 
     # --- Alerts (non-dismissed, for all users) ---
     alerts = db.query(Alert).filter(Alert.is_dismissed == False).order_by(Alert.created_at.desc()).limit(3).all()
@@ -535,21 +563,21 @@ def kiosk_dashboard(db: Session = Depends(get_db)):
                 f'<div class="chore-row{done_class}">'
                 f'<span class="chore-icon{" chore-icon-done" if t["done"] else ""}">{icon}</span>'
                 f'<span class="chore-title">{_esc(t["title"])}</span>'
-                f'</div>'
+                f"</div>"
             )
         family_tasks_html += (
             f'<div class="card child-card">'
             f'<div class="child-header" style="border-top-color:#f59e0b;">'
             f'<span class="child-name">{FREQ_LABELS[freq]} Family Tasks</span>'
             f'<span class="child-count">{done_count}/{len(items)}</span>'
-            f'</div>'
+            f"</div>"
             f'<div class="child-body">'
             f'<div class="progress-track">'
             f'<div class="progress-fill" style="background:#f59e0b;width:{int(done_count / len(items) * 100) if items else 0}%;"></div>'
-            f'</div>'
-            f'{task_rows}'
-            f'</div>'
-            f'</div>'
+            f"</div>"
+            f"{task_rows}"
+            f"</div>"
+            f"</div>"
         )
 
     # Bonus chores card
@@ -562,18 +590,18 @@ def kiosk_dashboard(db: Session = Depends(get_db)):
                 f'<span class="chore-icon" style="color:#fbbf24;">&#9733;</span>'
                 f'<span class="chore-title">{_esc(b["title"])}</span>'
                 f'<span class="bonus-reward">&pound;{b["reward"]:.2f}</span>'
-                f'</div>'
+                f"</div>"
             )
         bonus_html = (
             f'<div class="card child-card">'
             f'<div class="child-header" style="border-top-color:#a855f7;">'
             f'<span class="child-name">Bonus Chores</span>'
             f'<span class="child-count">{len(bonus_items)}</span>'
-            f'</div>'
+            f"</div>"
             f'<div class="child-body">'
-            f'{bonus_rows}'
-            f'</div>'
-            f'</div>'
+            f"{bonus_rows}"
+            f"</div>"
+            f"</div>"
         )
 
     # League table
@@ -588,7 +616,7 @@ def kiosk_dashboard(db: Session = Depends(get_db)):
             f'<span class="league-name">{_esc(entry["name"])}</span>'
             f'<span class="league-jobs">{entry["monthly_completions"]} jobs</span>'
             f'<span class="league-points">{entry["total_points"]} pts</span>'
-            f'</div>'
+            f"</div>"
         )
 
     # Upcoming events
@@ -607,8 +635,8 @@ def kiosk_dashboard(db: Session = Depends(get_db)):
                 ev_date = _esc(ev.start_time)
         date_time = ev_date
         if ev_time:
-            date_time += f' &middot; {ev_time}'
-        loc = f' &middot; {_esc(ev.location)}' if ev.location else ""
+            date_time += f" &middot; {ev_time}"
+        loc = f" &middot; {_esc(ev.location)}" if ev.location else ""
         # Calendar owner badge
         owner_badge = ""
         if ev.user:
@@ -619,18 +647,23 @@ def kiosk_dashboard(db: Session = Depends(get_db)):
             f'<div class="event-row">'
             f'<div class="event-top">'
             f'<span class="event-summary">{_esc(ev.summary)}</span>'
-            f'{owner_badge}'
-            f'</div>'
+            f"{owner_badge}"
+            f"</div>"
             f'<div class="event-time">{date_time}{loc}</div>'
-            f'</div>'
+            f"</div>"
         )
 
     # Garmin activities (last 7 days)
     from datetime import timedelta
+
     garmin_cutoff = now - timedelta(days=7)
-    garmin_activities = db.query(GarminActivity).filter(
-        GarminActivity.start_time >= garmin_cutoff
-    ).order_by(GarminActivity.start_time.desc()).limit(5).all()
+    garmin_activities = (
+        db.query(GarminActivity)
+        .filter(GarminActivity.start_time >= garmin_cutoff)
+        .order_by(GarminActivity.start_time.desc())
+        .limit(5)
+        .all()
+    )
 
     activities_html = ""
     if garmin_activities:
@@ -648,9 +681,9 @@ def kiosk_dashboard(db: Session = Depends(get_db)):
                 f'<div class="event-top">'
                 f'<span class="event-summary">{_esc(act.name)}</span>'
                 f'<span class="event-owner" style="background:{owner_color};">{first_name}</span>'
-                f'</div>'
+                f"</div>"
                 f'<div class="event-time">{date_str} &middot; {dur_str}{dist_str}{cal_str}</div>'
-                f'</div>'
+                f"</div>"
             )
     else:
         activities_html = '<p class="empty-state">No recent activities.</p>'
@@ -661,11 +694,7 @@ def kiosk_dashboard(db: Session = Depends(get_db)):
         alert_items = ""
         for al in alerts:
             alert_items += f'<div class="alert-item">{_esc(al.message)}</div>'
-        alert_html = (
-            f'<div class="alert-bar">'
-            f'{alert_items}'
-            f'</div>'
-        )
+        alert_html = f'<div class="alert-bar">{alert_items}</div>'
 
     page = f"""<!DOCTYPE html>
 <html lang="en">
@@ -761,10 +790,14 @@ h1,h2,h3{{color:#f8fafc;}}
   <div class="summary-label">Events Today</div>
   <div class="summary-value">{events_today_count}</div>
  </div>
-{f''' <div class="card summary-card">
+{
+        f''' <div class="card summary-card">
   <div class="summary-label">Family Balance</div>
   <div class="summary-value">&pound;{family_balance:.2f}</div>
- </div>''' if show_budget else ''}
+ </div>'''
+        if show_budget
+        else ""
+    }
 </div>
 
 <div class="main-grid">
@@ -801,7 +834,7 @@ h1,h2,h3{{color:#f8fafc;}}
 
 class ConnectionManager:
     def __init__(self):
-        self.active_connections: List[WebSocket] = []
+        self.active_connections: list[WebSocket] = []
 
     async def connect(self, websocket: WebSocket):
         await websocket.accept()
@@ -814,11 +847,15 @@ class ConnectionManager:
         for connection in self.active_connections:
             await connection.send_text(json.dumps(message))
 
+
 import asyncio
+
 import aio_pika
+
 from ..config import settings
 
 manager = ConnectionManager()
+
 
 async def consume_broadcasts():
     """Background task to consume refresh signals from RabbitMQ and broadcast via WS."""
@@ -833,16 +870,18 @@ async def consume_broadcasts():
                 if body.get("type") == "dashboard_refresh":
                     await manager.broadcast({"type": "DASHBOARD_REFRESH", "user_id": body["data"]["user_id"]})
 
+
 # Start the consumer in the background
 @router.on_event("startup")
 async def startup_event():
     asyncio.create_task(consume_broadcasts())
+
 
 @router.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
     await manager.connect(websocket)
     try:
         while True:
-            data = await websocket.receive_text()
+            await websocket.receive_text()
     except WebSocketDisconnect:
         manager.disconnect(websocket)

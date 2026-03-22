@@ -1,8 +1,10 @@
 import hashlib
 from datetime import datetime
+
 from playwright.async_api import async_playwright
 from sqlalchemy.orm import Session
-from ..models import User, Chore
+
+from ..models import Chore, User
 from .encryption import decrypt
 
 
@@ -62,12 +64,14 @@ async def scrape_homework(user: User, db: Session) -> dict:
                 cells = await row.locator("td").all_text_contents()
 
                 if len(cells) >= 3:
-                    homework_items.append({
-                        "subject": cells[0].strip(),
-                        "title": cells[1].strip(),
-                        "due": cells[2].strip(),
-                        "description": cells[3].strip() if len(cells) > 3 else "",
-                    })
+                    homework_items.append(
+                        {
+                            "subject": cells[0].strip(),
+                            "title": cells[1].strip(),
+                            "due": cells[2].strip(),
+                            "description": cells[3].strip() if len(cells) > 3 else "",
+                        }
+                    )
 
             # Upsert homework as chores
             seen_source_ids = set()

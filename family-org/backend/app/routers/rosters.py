@@ -1,11 +1,17 @@
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from typing import List
+
 from ..database import get_db
-from ..models import User, Chore, Roster, RosterAssignment, ChoreCompletion
+from ..models import Chore, ChoreCompletion, Roster, RosterAssignment, User
 from ..schemas import (
-    RosterCreate, RosterOut, RosterChoreCreate, RosterAssign,
-    RosterAssignmentOut, MyChoresResponse, MyRosterOut, MyChoreOut
+    MyChoreOut,
+    MyChoresResponse,
+    MyRosterOut,
+    RosterAssign,
+    RosterAssignmentOut,
+    RosterChoreCreate,
+    RosterCreate,
+    RosterOut,
 )
 from .auth import get_me
 
@@ -42,7 +48,7 @@ def create_roster(body: RosterCreate, db: Session = Depends(get_db), current_use
     return _roster_to_out(roster, db)
 
 
-@router.get("/", response_model=List[RosterOut])
+@router.get("/", response_model=list[RosterOut])
 def list_rosters(db: Session = Depends(get_db), current_user: User = Depends(get_me)):
     _require_parent(current_user)
     rosters = db.query(Roster).all()
@@ -50,7 +56,9 @@ def list_rosters(db: Session = Depends(get_db), current_user: User = Depends(get
 
 
 @router.put("/{roster_id}", response_model=RosterOut)
-def update_roster(roster_id: int, body: RosterCreate, db: Session = Depends(get_db), current_user: User = Depends(get_me)):
+def update_roster(
+    roster_id: int, body: RosterCreate, db: Session = Depends(get_db), current_user: User = Depends(get_me)
+):
     _require_parent(current_user)
     roster = db.query(Roster).filter(Roster.id == roster_id).first()
     if not roster:
@@ -74,8 +82,11 @@ def delete_roster(roster_id: int, db: Session = Depends(get_db), current_user: U
 
 # -- Roster Assignments --
 
-@router.post("/{roster_id}/assign", response_model=List[RosterAssignmentOut])
-def assign_roster(roster_id: int, body: RosterAssign, db: Session = Depends(get_db), current_user: User = Depends(get_me)):
+
+@router.post("/{roster_id}/assign", response_model=list[RosterAssignmentOut])
+def assign_roster(
+    roster_id: int, body: RosterAssign, db: Session = Depends(get_db), current_user: User = Depends(get_me)
+):
     _require_parent(current_user)
     roster = db.query(Roster).filter(Roster.id == roster_id).first()
     if not roster:
@@ -83,10 +94,11 @@ def assign_roster(roster_id: int, body: RosterAssign, db: Session = Depends(get_
 
     results = []
     for uid in body.user_ids:
-        existing = db.query(RosterAssignment).filter(
-            RosterAssignment.roster_id == roster_id,
-            RosterAssignment.user_id == uid
-        ).first()
+        existing = (
+            db.query(RosterAssignment)
+            .filter(RosterAssignment.roster_id == roster_id, RosterAssignment.user_id == uid)
+            .first()
+        )
         if not existing:
             a = RosterAssignment(roster_id=roster_id, user_id=uid)
             db.add(a)
@@ -101,10 +113,11 @@ def assign_roster(roster_id: int, body: RosterAssign, db: Session = Depends(get_
 @router.delete("/{roster_id}/assign/{user_id}")
 def unassign_roster(roster_id: int, user_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_me)):
     _require_parent(current_user)
-    a = db.query(RosterAssignment).filter(
-        RosterAssignment.roster_id == roster_id,
-        RosterAssignment.user_id == user_id
-    ).first()
+    a = (
+        db.query(RosterAssignment)
+        .filter(RosterAssignment.roster_id == roster_id, RosterAssignment.user_id == user_id)
+        .first()
+    )
     if not a:
         raise HTTPException(status_code=404, detail="Assignment not found")
     db.delete(a)
@@ -114,8 +127,11 @@ def unassign_roster(roster_id: int, user_id: int, db: Session = Depends(get_db),
 
 # -- Roster Chores --
 
+
 @router.post("/{roster_id}/chores")
-def add_roster_chore(roster_id: int, body: RosterChoreCreate, db: Session = Depends(get_db), current_user: User = Depends(get_me)):
+def add_roster_chore(
+    roster_id: int, body: RosterChoreCreate, db: Session = Depends(get_db), current_user: User = Depends(get_me)
+):
     _require_parent(current_user)
     roster = db.query(Roster).filter(Roster.id == roster_id).first()
     if not roster:
@@ -137,8 +153,11 @@ def add_roster_chore(roster_id: int, body: RosterChoreCreate, db: Session = Depe
 
 # -- Drag-and-drop chore management --
 
+
 @router.post("/{roster_id}/chores/from/{chore_id}")
-def move_chore_to_roster(roster_id: int, chore_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_me)):
+def move_chore_to_roster(
+    roster_id: int, chore_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_me)
+):
     _require_parent(current_user)
     roster = db.query(Roster).filter(Roster.id == roster_id).first()
     if not roster:
@@ -160,14 +179,21 @@ def move_chore_to_roster(roster_id: int, chore_id: int, db: Session = Depends(ge
         db.add(new_chore)
         db.commit()
         db.refresh(new_chore)
-        return {"id": new_chore.id, "title": new_chore.title, "points": new_chore.points, "frequency": new_chore.frequency}
+        return {
+            "id": new_chore.id,
+            "title": new_chore.title,
+            "points": new_chore.points,
+            "frequency": new_chore.frequency,
+        }
 
     # Already on this roster — no-op
     return {"id": chore.id, "title": chore.title, "points": chore.points, "frequency": chore.frequency}
 
 
 @router.delete("/{roster_id}/chores/{chore_id}")
-def remove_chore_from_roster(roster_id: int, chore_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_me)):
+def remove_chore_from_roster(
+    roster_id: int, chore_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_me)
+):
     _require_parent(current_user)
     chore = db.query(Chore).filter(Chore.id == chore_id, Chore.roster_id == roster_id).first()
     if not chore:
@@ -179,14 +205,18 @@ def remove_chore_from_roster(roster_id: int, chore_id: int, db: Session = Depend
 
 # -- Family members (for assignment picker) --
 
+
 @router.get("/family-members")
 def list_family_members(db: Session = Depends(get_db), current_user: User = Depends(get_me)):
     _require_parent(current_user)
     members = db.query(User).filter(User.role != "parent").all()
-    return [{"id": m.id, "name": m.name, "email": m.email, "color": (m.preferences or {}).get("color")} for m in members]
+    return [
+        {"id": m.id, "name": m.name, "email": m.email, "color": (m.preferences or {}).get("color")} for m in members
+    ]
 
 
 # -- Parent View: Family Overview --
+
 
 @router.get("/family-overview")
 def get_family_overview(db: Session = Depends(get_db), current_user: User = Depends(get_me)):
@@ -209,37 +239,51 @@ def get_family_overview(db: Session = Depends(get_db), current_user: User = Depe
             completed_count = 0
             chore_items = []
             for c in chores:
-                comp = db.query(ChoreCompletion).filter(
-                    ChoreCompletion.chore_id == c.id,
-                    ChoreCompletion.user_id == child.id,
-                    ChoreCompletion.completed_at >= today_start
-                ).first()
+                comp = (
+                    db.query(ChoreCompletion)
+                    .filter(
+                        ChoreCompletion.chore_id == c.id,
+                        ChoreCompletion.user_id == child.id,
+                        ChoreCompletion.completed_at >= today_start,
+                    )
+                    .first()
+                )
                 is_done = comp is not None
                 if is_done:
                     completed_count += 1
-                chore_items.append({
-                    "id": c.id, "title": c.title, "points": c.points,
-                    "frequency": c.frequency, "is_completed": is_done,
-                })
-            child_rosters.append({
-                "roster_id": roster.id,
-                "roster_name": roster.name,
-                "chores": chore_items,
-                "completed": completed_count,
-                "total": len(chores),
-            })
+                chore_items.append(
+                    {
+                        "id": c.id,
+                        "title": c.title,
+                        "points": c.points,
+                        "frequency": c.frequency,
+                        "is_completed": is_done,
+                    }
+                )
+            child_rosters.append(
+                {
+                    "roster_id": roster.id,
+                    "roster_name": roster.name,
+                    "chores": chore_items,
+                    "completed": completed_count,
+                    "total": len(chores),
+                }
+            )
         color = (child.preferences or {}).get("color")
-        result.append({
-            "user_id": child.id,
-            "user_name": child.name,
-            "color": color,
-            "rosters": child_rosters,
-        })
+        result.append(
+            {
+                "user_id": child.id,
+                "user_name": child.name,
+                "color": color,
+                "rosters": child_rosters,
+            }
+        )
 
     return result
 
 
 # -- Child View: My Chores --
+
 
 @router.get("/my-chores", response_model=MyChoresResponse)
 def get_my_chores(db: Session = Depends(get_db), current_user: User = Depends(get_me)):
@@ -262,63 +306,78 @@ def get_my_chores(db: Session = Depends(get_db), current_user: User = Depends(ge
         chore_items = []
         completed_count = 0
         for c in chores:
-            comp = db.query(ChoreCompletion).filter(
-                ChoreCompletion.chore_id == c.id,
-                ChoreCompletion.user_id == current_user.id,
-                ChoreCompletion.completed_at >= today_start
-            ).first()
+            comp = (
+                db.query(ChoreCompletion)
+                .filter(
+                    ChoreCompletion.chore_id == c.id,
+                    ChoreCompletion.user_id == current_user.id,
+                    ChoreCompletion.completed_at >= today_start,
+                )
+                .first()
+            )
             is_done = comp is not None
             if is_done:
                 completed_count += 1
             else:
                 all_roster_chores_done = False
-            chore_items.append(MyChoreOut(
-                id=c.id, title=c.title, points=c.points,
-                frequency=c.frequency, is_completed=is_done, roster_name=roster.name
-            ))
-        rosters_out.append(MyRosterOut(
-            roster_id=rid, roster_name=roster.name,
-            chores=chore_items, completed=completed_count, total=len(chores)
-        ))
+            chore_items.append(
+                MyChoreOut(
+                    id=c.id,
+                    title=c.title,
+                    points=c.points,
+                    frequency=c.frequency,
+                    is_completed=is_done,
+                    roster_name=roster.name,
+                )
+            )
+        rosters_out.append(
+            MyRosterOut(
+                roster_id=rid, roster_name=roster.name, chores=chore_items, completed=completed_count, total=len(chores)
+            )
+        )
 
     if not roster_ids:
         all_roster_chores_done = False
 
     # Unassigned non-bonus, non-roster chores (Go4Schools, AI, legacy)
-    unassigned_chores = db.query(Chore).filter(
-        Chore.roster_id.is_(None), Chore.is_bonus == False
-    ).all()
+    unassigned_chores = db.query(Chore).filter(Chore.roster_id.is_(None), Chore.is_bonus == False).all()
     unassigned_out = []
     for c in unassigned_chores:
         if c.personal and c.assignee_id != current_user.id:
             continue
-        comp = db.query(ChoreCompletion).filter(
-            ChoreCompletion.chore_id == c.id,
-            ChoreCompletion.user_id == current_user.id,
-            ChoreCompletion.completed_at >= today_start
-        ).first()
+        comp = (
+            db.query(ChoreCompletion)
+            .filter(
+                ChoreCompletion.chore_id == c.id,
+                ChoreCompletion.user_id == current_user.id,
+                ChoreCompletion.completed_at >= today_start,
+            )
+            .first()
+        )
         is_done = comp is not None or c.is_completed
         if not is_done:
             all_roster_chores_done = False
-        unassigned_out.append(MyChoreOut(
-            id=c.id, title=c.title, points=c.points,
-            frequency=c.frequency, is_completed=is_done
-        ))
+        unassigned_out.append(
+            MyChoreOut(id=c.id, title=c.title, points=c.points, frequency=c.frequency, is_completed=is_done)
+        )
 
     # Bonus chores (shared pool)
     bonus_chores = db.query(Chore).filter(Chore.is_bonus == True).all()
     bonus_out = []
     for c in bonus_chores:
-        comp = db.query(ChoreCompletion).filter(
-            ChoreCompletion.chore_id == c.id,
-            ChoreCompletion.user_id == current_user.id,
-            ChoreCompletion.completed_at >= today_start
-        ).first()
+        comp = (
+            db.query(ChoreCompletion)
+            .filter(
+                ChoreCompletion.chore_id == c.id,
+                ChoreCompletion.user_id == current_user.id,
+                ChoreCompletion.completed_at >= today_start,
+            )
+            .first()
+        )
         is_done = comp is not None or c.is_completed
-        bonus_out.append(MyChoreOut(
-            id=c.id, title=c.title, points=c.points,
-            frequency=c.frequency, is_completed=is_done
-        ))
+        bonus_out.append(
+            MyChoreOut(id=c.id, title=c.title, points=c.points, frequency=c.frequency, is_completed=is_done)
+        )
 
     return MyChoresResponse(
         rosters=rosters_out,

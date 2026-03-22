@@ -1,9 +1,10 @@
+import time
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from typing import Optional
-import time
-from .routers import auth, chores, rewards, dashboard, settings, rosters
+
 from .database import init_db
+from .routers import auth, chores, dashboard, rewards, rosters, settings
 
 app = FastAPI()
 
@@ -13,18 +14,14 @@ for i in range(5):
         init_db()
         break
     except Exception as e:
-        print(f"Database not ready, retrying ({i+1}/5)... {e}")
+        print(f"Database not ready, retrying ({i + 1}/5)... {e}")
         time.sleep(5)
 else:
     print("Could not connect to database after 5 retries.")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5180", 
-        "http://127.0.0.1:5180",
-        "https://family.brian-scanlon.uk"
-    ],
+    allow_origins=["http://localhost:5180", "http://127.0.0.1:5180", "https://family.brian-scanlon.uk"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -37,9 +34,11 @@ app.include_router(dashboard.router)
 app.include_router(settings.router)
 app.include_router(rosters.router)
 
+
 @app.get("/")
 def read_root():
     return {"Hello": "World", "Phase": "1 - Family Organization"}
+
 
 @app.get("/health")
 def health_check():

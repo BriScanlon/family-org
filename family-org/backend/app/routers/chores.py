@@ -1,20 +1,23 @@
 from datetime import datetime
-from fastapi import APIRouter, Depends, HTTPException, status, Request
-from sqlalchemy.orm import Session
-from sqlalchemy import func
-from typing import List
-from ..database import get_db
-from ..models import User, Chore, ChoreCompletion, RosterAssignment
-from ..schemas import ChoreCreate, Chore as ChoreSchema
 
+from fastapi import APIRouter, Depends, HTTPException, Request
+from sqlalchemy import func
+from sqlalchemy.orm import Session
+
+from ..database import get_db
+from ..models import Chore, ChoreCompletion, RosterAssignment, User
+from ..schemas import Chore as ChoreSchema
+from ..schemas import ChoreCreate
 from .auth import get_me
 from .dashboard import manager
 
 router = APIRouter(prefix="/chores", tags=["chores"])
 
-@router.get("/", response_model=List[ChoreSchema])
+
+@router.get("/", response_model=list[ChoreSchema])
 def read_chores(db: Session = Depends(get_db), request: Request = None):
     from ..services.auth_service import verify_token
+
     # Try to get current user from cookie for personal chore filtering
     user_id = None
     if request:
@@ -23,18 +26,18 @@ def read_chores(db: Session = Depends(get_db), request: Request = None):
             payload = verify_token(token)
             if payload:
                 from ..models import User as UserModel
+
                 user = db.query(UserModel).filter(UserModel.email == payload.get("sub")).first()
                 if user:
                     user_id = user.id
 
     if user_id:
         # Show all non-personal chores + personal chores assigned to this user
-        return db.query(Chore).filter(
-            (Chore.personal == False) | (Chore.assignee_id == user_id)
-        ).all()
+        return db.query(Chore).filter((Chore.personal == False) | (Chore.assignee_id == user_id)).all()
     else:
         # No auth — show only non-personal chores
         return db.query(Chore).filter(Chore.personal == False).all()
+
 
 @router.post("/", response_model=ChoreSchema)
 def create_chore(chore: ChoreCreate, db: Session = Depends(get_db)):
@@ -43,6 +46,7 @@ def create_chore(chore: ChoreCreate, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(db_chore)
     return db_chore
+
 
 @router.put("/{chore_id}/complete")
 async def complete_chore(chore_id: int, user_id: int, db: Session = Depends(get_db)):
@@ -54,11 +58,15 @@ async def complete_chore(chore_id: int, user_id: int, db: Session = Depends(get_
 
     # For roster chores, use ChoreCompletion
     if chore.roster_id is not None:
-        existing = db.query(ChoreCompletion).filter(
-            ChoreCompletion.chore_id == chore_id,
-            ChoreCompletion.user_id == user_id,
-            ChoreCompletion.completed_at >= today_start
-        ).first()
+        existing = (
+            db.query(ChoreCompletion)
+            .filter(
+                ChoreCompletion.chore_id == chore_id,
+                ChoreCompletion.user_id == user_id,
+                ChoreCompletion.completed_at >= today_start,
+            )
+            .first()
+        )
         if existing:
             raise HTTPException(status_code=400, detail="Chore already completed today")
 
@@ -70,13 +78,15 @@ async def complete_chore(chore_id: int, user_id: int, db: Session = Depends(get_
             user.points += chore.points
         db.commit()
 
-        await manager.broadcast({
-            "type": "CHORE_COMPLETED",
-            "chore_id": chore_id,
-            "user_id": user_id,
-            "is_bonus": False,
-            "reward": chore.points
-        })
+        await manager.broadcast(
+            {
+                "type": "CHORE_COMPLETED",
+                "chore_id": chore_id,
+                "user_id": user_id,
+                "is_bonus": False,
+                "reward": chore.points,
+            }
+        )
         return {"status": "success", "points_added": chore.points, "money_added": 0}
 
     # Legacy path for non-roster chores (bonus chores, Go4Schools, AI, etc.)
@@ -89,20 +99,24 @@ async def complete_chore(chore_id: int, user_id: int, db: Session = Depends(get_
         for a in assignments:
             roster_chores = db.query(Chore).filter(Chore.roster_id == a.roster_id).all()
             for rc in roster_chores:
-                comp = db.query(ChoreCompletion).filter(
-                    ChoreCompletion.chore_id == rc.id,
-                    ChoreCompletion.user_id == user_id,
-                    ChoreCompletion.completed_at >= today_start
-                ).first()
+                comp = (
+                    db.query(ChoreCompletion)
+                    .filter(
+                        ChoreCompletion.chore_id == rc.id,
+                        ChoreCompletion.user_id == user_id,
+                        ChoreCompletion.completed_at >= today_start,
+                    )
+                    .first()
+                )
                 if not comp:
                     raise HTTPException(status_code=400, detail="Complete all your roster chores first!")
 
         # Also check non-roster standard chores
-        incomplete_standard = db.query(Chore).filter(
-            Chore.roster_id.is_(None),
-            Chore.is_bonus == False,
-            Chore.is_completed == False
-        ).first()
+        incomplete_standard = (
+            db.query(Chore)
+            .filter(Chore.roster_id.is_(None), Chore.is_bonus == False, Chore.is_completed == False)
+            .first()
+        )
         if incomplete_standard:
             raise HTTPException(status_code=400, detail="Complete all your standard chores first!")
 
@@ -126,19 +140,22 @@ async def complete_chore(chore_id: int, user_id: int, db: Session = Depends(get_
 
     db.commit()
 
-    await manager.broadcast({
-        "type": "CHORE_COMPLETED",
-        "chore_id": chore_id,
-        "user_id": user_id,
-        "is_bonus": chore.is_bonus,
-        "reward": chore.reward_money if chore.is_bonus else chore.points
-    })
+    await manager.broadcast(
+        {
+            "type": "CHORE_COMPLETED",
+            "chore_id": chore_id,
+            "user_id": user_id,
+            "is_bonus": chore.is_bonus,
+            "reward": chore.reward_money if chore.is_bonus else chore.points,
+        }
+    )
 
     return {
         "status": "success",
         "points_added": chore.points if not chore.is_bonus else 0,
-        "money_added": chore.reward_money if chore.is_bonus else 0
+        "money_added": chore.reward_money if chore.is_bonus else 0,
     }
+
 
 @router.put("/{chore_id}/uncomplete")
 async def uncomplete_chore(chore_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_me)):
@@ -165,15 +182,20 @@ async def uncomplete_chore(chore_id: int, db: Session = Depends(get_db), current
     chore.last_completed_at = None
     db.commit()
 
-    await manager.broadcast({
-        "type": "CHORE_UNCOMPLETED",
-        "chore_id": chore_id,
-    })
+    await manager.broadcast(
+        {
+            "type": "CHORE_UNCOMPLETED",
+            "chore_id": chore_id,
+        }
+    )
 
     return {"status": "success"}
 
+
 @router.put("/{chore_id}")
-def update_chore(chore_id: int, chore_update: ChoreCreate, db: Session = Depends(get_db), current_user: User = Depends(get_me)):
+def update_chore(
+    chore_id: int, chore_update: ChoreCreate, db: Session = Depends(get_db), current_user: User = Depends(get_me)
+):
     if current_user.role != "parent":
         raise HTTPException(status_code=403, detail="Only parents can edit chores")
 
@@ -193,6 +215,7 @@ def update_chore(chore_id: int, chore_update: ChoreCreate, db: Session = Depends
     db.refresh(chore)
     return chore
 
+
 @router.delete("/{chore_id}")
 def delete_chore(chore_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_me)):
     if current_user.role != "parent":
@@ -206,6 +229,7 @@ def delete_chore(chore_id: int, db: Session = Depends(get_db), current_user: Use
     db.commit()
     return {"status": "deleted"}
 
-@router.get("/user/{user_id}", response_model=List[ChoreSchema])
+
+@router.get("/user/{user_id}", response_model=list[ChoreSchema])
 def read_user_chores(user_id: int, db: Session = Depends(get_db)):
     return db.query(Chore).filter(Chore.assignee_id == user_id).all()

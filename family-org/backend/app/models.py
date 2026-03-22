@@ -1,9 +1,10 @@
-from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, Float, DateTime, JSON
-from sqlalchemy.orm import relationship
+from sqlalchemy import JSON, Boolean, Column, DateTime, Float, ForeignKey, Integer, String
 from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 
 Base = declarative_base()
+
 
 class User(Base):
     __tablename__ = "users"
@@ -12,11 +13,11 @@ class User(Base):
     google_id = Column(String, unique=True, index=True)
     email = Column(String, unique=True, index=True)
     name = Column(String)
-    role = Column(String, default="member") # parent, member
+    role = Column(String, default="member")  # parent, member
     points = Column(Integer, default=0)
-    balance = Column(Float, default=0.0) # Earned money for bonus chores
-    synced_calendars = Column(JSON, default=list) # List of calendar IDs to sync
-    threshold_preference = Column(Float, default=5.0) # Number of tasks/events before warning
+    balance = Column(Float, default=0.0)  # Earned money for bonus chores
+    synced_calendars = Column(JSON, default=list)  # List of calendar IDs to sync
+    threshold_preference = Column(Float, default=5.0)  # Number of tasks/events before warning
     google_access_token = Column(String, nullable=True)
     google_refresh_token = Column(String, nullable=True)
     preferences = Column(JSON, default=dict, nullable=False, server_default="{}")
@@ -31,6 +32,7 @@ class User(Base):
     alerts = relationship("Alert", back_populates="user")
     garmin_activities = relationship("GarminActivity", back_populates="user", cascade="all, delete-orphan")
 
+
 class Chore(Base):
     __tablename__ = "chores"
 
@@ -39,12 +41,12 @@ class Chore(Base):
     title = Column(String, index=True)
     description = Column(String, nullable=True)
     points = Column(Integer, default=0)
-    reward_money = Column(Float, default=0.0) # Money value for bonus chores
+    reward_money = Column(Float, default=0.0)  # Money value for bonus chores
     is_bonus = Column(Boolean, default=False)
     is_completed = Column(Boolean, default=False)
     last_completed_at = Column(DateTime, nullable=True)
     created_at = Column(DateTime, server_default=func.now())
-    frequency = Column(String, default="daily") # daily, weekly, monthly, once
+    frequency = Column(String, default="daily")  # daily, weekly, monthly, once
     source = Column(String, default="manual")  # "manual" or "go4schools"
     source_id = Column(String, nullable=True, unique=True, index=True)  # dedup key
     due_date = Column(DateTime, nullable=True)
@@ -99,11 +101,12 @@ class Reward(Base):
     id = Column(Integer, primary_key=True, index=True)
     title = Column(String, index=True)
     description = Column(String, nullable=True)
-    cost = Column(Float, default=0.0) # Cost in money
+    cost = Column(Float, default=0.0)  # Cost in money
     is_redeemed = Column(Boolean, default=False)
     redeemer_id = Column(Integer, ForeignKey("users.id"))
 
     redeemer = relationship("User", back_populates="rewards")
+
 
 class Event(Base):
     __tablename__ = "events"
@@ -111,12 +114,13 @@ class Event(Base):
     id = Column(Integer, primary_key=True, index=True)
     google_event_id = Column(String, unique=True, index=True)
     summary = Column(String)
-    start_time = Column(String) # ISO format
+    start_time = Column(String)  # ISO format
     end_time = Column(String)
     location = Column(String, nullable=True)
     user_id = Column(Integer, ForeignKey("users.id"))
 
     user = relationship("User", back_populates="events")
+
 
 class Alert(Base):
     __tablename__ = "alerts"
@@ -124,12 +128,13 @@ class Alert(Base):
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"))
     message = Column(String)
-    type = Column(String, default="warning") # warning, suggestion
+    type = Column(String, default="warning")  # warning, suggestion
     is_dismissed = Column(Boolean, default=False)
-    feedback = Column(Integer, nullable=True) # 1 for helpful, -1 for not helpful
+    feedback = Column(Integer, nullable=True)  # 1 for helpful, -1 for not helpful
     created_at = Column(DateTime, server_default=func.now())
 
     user = relationship("User", back_populates="alerts")
+
 
 class GarminActivity(Base):
     __tablename__ = "garmin_activities"

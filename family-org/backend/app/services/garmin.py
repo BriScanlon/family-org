@@ -38,11 +38,7 @@ async def sync_activities(user: User, db: Session) -> dict:
                 continue
 
             # Skip if already in DB
-            existing = (
-                db.query(GarminActivity)
-                .filter(GarminActivity.garmin_activity_id == garmin_id)
-                .first()
-            )
+            existing = db.query(GarminActivity).filter(GarminActivity.garmin_activity_id == garmin_id).first()
             if existing:
                 continue
 
@@ -59,7 +55,9 @@ async def sync_activities(user: User, db: Session) -> dict:
 
             # Extract activity_type from nested activityType dict
             activity_type_obj = activity.get("activityType", {})
-            activity_type = activity_type_obj.get("typeKey", "unknown") if isinstance(activity_type_obj, dict) else "unknown"
+            activity_type = (
+                activity_type_obj.get("typeKey", "unknown") if isinstance(activity_type_obj, dict) else "unknown"
+            )
 
             # Extract optional numeric fields safely
             distance = activity.get("distance")
