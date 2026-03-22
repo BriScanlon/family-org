@@ -95,7 +95,7 @@ jobs:
     steps:
       - name: Clean workspace
         run: |
-          sudo rm -rf $GITHUB_WORKSPACE/* $GITHUB_WORKSPACE/.??* || true
+          docker run --rm -v $GITHUB_WORKSPACE:/workspace alpine sh -c "rm -rf /workspace/* /workspace/.??*" || true
         working-directory: /
 
       - uses: actions/checkout@v4
@@ -141,7 +141,7 @@ jobs:
             -f docker-compose.yml \
             -f docker-compose.test.yml \
             down -v
-          sudo chown -R $(id -u):$(id -g) $GITHUB_WORKSPACE || true
+          docker run --rm -v $GITHUB_WORKSPACE:/workspace alpine chown -R $(id -u):$(id -g) /workspace || true
 
   build-and-push:
     name: Build & Push Images
