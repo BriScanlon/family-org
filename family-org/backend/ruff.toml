@@ -1,0 +1,10 @@
+# backend/ruff.toml
+line-length = 120
+target-version = "py311"
+
+[lint]
+select = ["E", "F", "W", "I", "S", "B", "A", "C4", "UP"]
+ignore = ["S101"]  # allow assert in tests
+
+[format]
+quote-style = "double"
