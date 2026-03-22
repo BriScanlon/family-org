@@ -1,11 +1,12 @@
+import os
 import requests
 import time
 import uuid
 import unittest
 
 class TestFamilyOrgEndToEnd(unittest.TestCase):
-    BACKEND_URL = "http://localhost:8090"
-    FRONTEND_URL = "http://localhost:5180"
+    BACKEND_URL = os.environ.get("TEST_BACKEND_URL", "http://localhost:8090")
+    FRONTEND_URL = os.environ.get("TEST_FRONTEND_URL", "http://localhost:5180")
 
     def test_01_backend_health(self):
         response = requests.get(f"{self.BACKEND_URL}/health")
